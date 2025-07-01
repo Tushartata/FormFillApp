@@ -1,0 +1,532 @@
+AWS - S3:
+Simple storage service: Is an object storage.
+Storage: a) Object storage b) Block storage (Install OS).
+
+Object Storage : Where we store movies, images, files, pdf, etc.
+
+Edge Location: Physical location of data storage, all over the world-data can be anywhere.
+
+Amazon S3 (Simple Storage Service) is a cloud-based object storage service provided by AWS. It allows you to store and retrieve any amount of data, at any time, from anywhere on the web.
+It is widely used for storing files, backups, images, videos, logs, static websites,  and much more.
+
+1. Reliable for backups
+2. Versioning: Keep multiple versions of a file
+3. Life-cylce : Auto-delete or archive to Glacier
+
+It stores files as objects inside buckets.
+It's highly scalable, durable, and secure.
+
+1.Static Website Hosting
+You can host HTML/CSS/JS websites directly from an S3 bucket.
+Example: A startup hosts their landing page using S3 and CloudFront (CDN).
+
+2.Backup and Disaster Recovery
+Store daily server/database backups to S3.
+Example: A MySQL database backup is uploaded daily to S3 using "cron + aws cli".
+
+3.Log Storage
+Store logs from EC2, ELB, or CloudTrail to S3.
+Example: A DevOps team configures Apache logs to be archived to S3 every hour.
+
+4.Software and Code Deployment
+Store deployment packages (.zip, .tar) for Lambda or EC2.
+Example: CI/CD pipeline uploads build artifacts to S3 before deployment.
+
+How to Upload Files to s3?
+AWS CLI:
+aws s3 cp file.txt s3://my-bucket-name/folder/
+
+How to download file from S3?
+aws s3 cp s3://my-bucket-name/myfile.txt .    # . refer to current directory
+
+Upload a Folder Recursively:
+aws s3 cp /local/folder/ s3://my-bucket-name/folder/ --recursive    
+
+Sync Local Folder with S3 Bucket:
+aws s3 sync ./local-folder/ s3://my-bucket-name/backup/    #like rsync only copy new/changed file
+
+Delete a File from S3:
+aws s3 rm s3://my-bucket-name/myfile.txt
+
+aws s3 rm s3://my-bucket-name/reports/ --recursive     #Delete multiple files in a folder
+-----------
+1.
+A pre-signed URL is "a time-limited link" generated using your AWS credentials, allowing:
+Download
+Upload
+View (in browser)
+
+Example: Generate a Pre-Signed URL (Download):
+aws s3 presign s3://my-bucket-name/reports/file.pdf --expires-in 600   # expired in 10 minutes
+Output:
+https://my-bucket-name.s3.amazonaws.com/reports/file.pdf?AWSAccessKeyId=ABC123XYZ&Signature=xyz123abc&Expires=17.....
+
+# The user can click or paste this link in a browser to download the file.
+
+2.
+Generate a Pre-Signed URL (Upload):
+This requires generating the URL programmatically (e.g., with Python or Node.js), not via aws cli:
+
+Python Code to Generate (Using Boto3):
+-------------------------
+import boto3
+s3 = boto3.client('s3')
+url = s3.generate_presigned_url(
+    'get_object',
+    Params={'Bucket': 'my-bucket-name', 'Key': 'reports/file.pdf'},
+    ExpiresIn=600
+)
+print(url)
+-------------------------
+What is AWS Glacier?
+Amazon S3 Glacier (now part of Amazon S3 Glacier Flexible Retrieval and S3 Glacier Deep Archive) is a low-cost cloud storage service designed for "long-term data archiving" and "backup".
+
+1. Much cheaper than regular S3 Standard storage. Ideal for infrequently accessed data.
+2. Use case:Legal archives, old records, backups, old logs, compliance storage, etc.
+
+Glacier Tiers:
+1.S3 Glacier Flexible Retrieval  (Retrieval time: minutes to hours)
+2.S3 Glacier Deep Archive        (Retrieval time: 12–48 hours.)
+
+How to Upload Data to Glacier (via S3) ?
+You don't upload directly to Glacier with the CLI. Instead, you:
+Upload to S3
+
+aws s3 cp mydata.zip s3://my-bucket-name/ --storage-class GLACIER
+
+----------------------------------   S3 END -------------------------------------
+
+VPC : What is AWS VPC (Virtual Private Cloud)?
+Amazon VPC lets you create a private, isolated section of the AWS cloud where you can launch AWS resources (like EC2, RDS, etc.) in a custom network — just like your own data center network.
+
+Subnets: Divide your VPC into smaller segments, Can be "Public" or "Private".
+Route Tables: Define how traffic flows within the VPC and to the outside.
+Internet Gateway (IGW): Lets public subnets connect to the internet.
+NAT Gateway: Lets private subnets initiate internet requests (e.g., download patches) without exposing themselves to incoming traffic.
+Security Groups:Virtual firewalls for instances (at EC2 level).
+Network ACLs: Optional stateless firewalls at subnet level.  (No restriction for outboud traffic)
+Elastic IPs: Static public IPs for EC2 or NAT Gateway.
+Peering/VPN/Direct Connect:	Connect your VPC to other VPCs or on-premise data centers.
+
+Common VPC Use Cases:
+Web Hosting:
+Public subnet: web servers (Apache, Nginx)
+
+Private subnet: databases (MySQL, RDS)
+
+Hybrid Cloud:
+Connect your data center to AWS VPC via VPN.
+
+Multi-tier Architecture:
+VPC supports isolation and scalability across app, web, and DB layers.
+----------------------------------------------------------------------------------
+What is CloudFormation ???
+
+AWS CloudFormation is a service that lets you model, provision, and manage AWS infrastructure as code (IaC). Instead of manually creating resources like EC2, S3, VPC, etc., you define them in a template file (in YAML or JSON), and CloudFormation automatically creates and configures them for you.
+
+Real-World Use Cases:
+Set up a complete VPC architecture..
+
+Deploy multi-tier applications (web + app + DB).
+
+Manage Dev/Test/Prod environments consistently.
+
+Automate provisioning of S3 buckets, Lambda, API Gateway.
+
+Tips for Interviews:
+CloudFormation vs Terraform – CloudFormation is AWS-native; Terraform is multi-cloud(AWS, Azure, GCP)
+
+Rollback on failure – CF can auto-delete everything if stack creation fails.
+
+Change Sets – Preview what will happen before updating a stack.
+-------------------
+A real VPC CloudFormation YAML template:
+
+a real-world AWS VPC CloudFormation YAML template that creates:
+x
+A custom VPC:
+Public and Private Subnets:
+An Internet Gateway:
+A NAT Gateway:
+Route tables for both public and private traffic:
+
+-------------------
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC with Public and Private Subnets, IGW, and NAT Gateway 
+
+Parameters:
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetCIDR:              # CIDR – Classless Inter-Domain Routing
+    Type: String
+    Default: 10.0.1.0/24
+  PrivateSubnetCIDR:
+    Type: String
+    Default: 10.0.2.0/24  
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: MyVPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: MyIGW
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: PublicSubnet
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PrivateSubnetCIDR
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: PrivateSubnet
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PublicRouteTable
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt EIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Name
+          Value: MyNATGateway
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: PrivateRouteTable
+
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      RouteTableId: !Ref PrivateRouteTable
+
+Outputs:
+  VpcId:
+    Description: The ID of the VPC
+    Value: !Ref VPC
+  PublicSubnetId:
+    Description: Public subnet ID
+    Value: !Ref PublicSubnet
+  PrivateSubnetId:
+    Description: Private subnet ID
+    Value: !Ref PrivateSubnet
+------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+---------------------------------------------------------------------------------------------- 
+What is AWS Lambda ?
+AWS Lambda is a serverless compute service provided by Amazon Web Services (AWS). It lets you run code without provisioning or managing servers. You simply upload your code, and Lambda automatically runs it in response to events — such as an HTTP request, file upload to S3, database update, etc.
+
+What is CDN ? 
+What is a CDN?
+CDN (Content Delivery Network) is a globally distributed network of servers (edge locations) that deliver web content (such as images, videos, scripts, or web pages) to users based on their geographic location.
+
+The goal of a CDN is to reduce latency (delay), improve website load speed, and enhance reliability.
+
+How CDN Works: 
+1.A copy of your static content (e.g., HTML, CSS, JS, images, videos) is cached on edge servers located around the world.
+
+2.When a user accesses your website, the CDN routes their request to the nearest edge server.
+
+3.This results in faster content delivery, especially for users far from your main server.
+
+----------------------------------------------------------------------------------------------
+What is a Proxy Server?
+A proxy server is an intermediate server that sits between a client (like your web browser) and the internet (destination server). It forwards client requests to the destination and returns the response back to the client.
+
+In simple terms:
+➡️ Client → Proxy → Internet
+⬅️ Internet → Proxy → Client
+
+Hide the client's real IP address from the destination server.
+Log and monitor user activity on the network.
+Caching: Store frequently accessed content to reduce bandwidth and speed up access
+Security: Acts as a firewall or content filter, preventing direct access.
+
+Types of Proxy Servers:
+Forward Proxy - Sits in front of the client, forwards requests to the internet.
+Reverse Proxy - Sits in front of a server, forwards requests to internal servers.
+Caching Proxy - Stores copies of frequently accessed data to improve performance.
+
+------------------------------------------------------------------------------------------------
+Creating a simple Java program to build a webpage where you can input values like name and mobile number, and store them in a database involves a few key components:
+
+1. **HTML/CSS** for the webpage (frontend).
+2. **Java Servlet** for handling form submissions (backend).
+3. **JDBC** for interacting with the database.
+4. **Database** to store the values (e.g., MySQL).
+
+### Steps Overview:
+
+1. **Create the database**.
+2. **Create a webpage (HTML)** to accept user input.
+3. **Create a Java Servlet** to process the form data.
+4. **Use JDBC** to connect to the database and store the data.
+
+### 1. Database Setup (MySQL)
+
+Create a database and table to store the user input:
+
+```sql
+CREATE DATABASE user_info;
+
+USE user_info;
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    mobile_number VARCHAR(15)
+);
+```
+
+### 2. Webpage (HTML) for User Input
+
+Create a simple HTML form where you can enter the name and mobile number:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple User Form</title>
+</head>
+<body>
+    <h2>Enter Your Details</h2>
+    <form action="UserServlet" method="POST">
+        Name: <input type="text" name="name" required><br><br>
+        Mobile Number: <input type="text" name="mobile_number" required><br><br>
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>
+```
+
+### 3. Java Servlet (Backend)
+
+You'll need to create a Java Servlet that handles the form submission, processes the data, and stores it in the database.
+
+#### Add JDBC dependencies:
+If you're using Maven, add the MySQL JDBC driver to the `pom.xml`:
+
+```xml
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>8.0.23</version>
+</dependency>
+```
+
+#### UserServlet.java
+
+```java
+import java.io.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import java.sql.*;
+
+public class UserServlet extends HttpServlet {
+    private static final String DB_URL = "jdbc:mysql://localhost:3306/user_info";
+    private static final String DB_USER = "root"; // Update this with your DB user
+    private static final String DB_PASSWORD = "password"; // Update this with your DB password
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // Get form parameters
+        String name = request.getParameter("name");
+        String mobileNumber = request.getParameter("mobile_number");
+
+        // Prepare database connection and insert data
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+            
+            String sql = "INSERT INTO users (name, mobile_number) VALUES (?, ?)";
+            PreparedStatement pstmt = conn.prepareStatement(sql);
+            pstmt.setString(1, name);
+            pstmt.setString(2, mobileNumber);
+            
+            int rowsInserted = pstmt.executeUpdate();
+            
+            if (rowsInserted > 0) {
+                response.getWriter().println("User info successfully stored!");
+            }
+            
+            conn.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.getWriter().println("Error storing data: " + e.getMessage());
+        }
+    }
+}
+```
+
+### 4. Configure `web.xml`
+
+You need to configure your servlet in the `web.xml` file (in `WEB-INF` folder) for the servlet to be accessible via URL.
+
+```xml
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+                             http://java.sun.com/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+    <servlet>
+        <servlet-name>UserServlet</servlet-name>
+        <servlet-class>UserServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>UserServlet</servlet-name>
+        <url-pattern>/UserServlet</url-pattern>
+    </servlet-mapping>
+</web-app>
+```
+
+### 5. Run the Application
+
+- Deploy the project to a servlet container (like Apache Tomcat).
+- Visit the form's URL (e.g., `http://localhost:8080/yourprojectname/index.html`).
+- Fill out the form and submit.
+- The user data will be inserted into the `users` table in your MySQL database.
+
+---
+
+### Notes:
+1. **JDBC Connection**: Make sure you have the MySQL driver in your classpath.
+2. **Error Handling**: For a production environment, ensure you handle exceptions more robustly.
+3. **Security**: If you're planning to deploy this publicly, make sure to add input validation, use parameterized queries, and secure the database credentials.
+
+Let me know if you'd like more details on any specific part!
+
+
+--------------------------------------------------------
+What is Sharding in Database ? The process of splitting the data into shards.
+
+Sharding in a database is a technique used to split a large database into smaller, faster, more manageable parts called shards.
+
+Imagine a huge table with millions of rows — searching or updating data becomes slow. So, instead of putting all data in one place, you divide it across multiple databases (shards).
+
+-------------------------------------------------------
+
+
+
+
