@@ -1,0 +1,439 @@
+Lecture: 72
+Health Checks: Container level
+
+A livenessProbe tells Kubernetes whether a container is still running properly.
+
+If the liveness probe fails repeatedly, Kubernetes assumes the application inside the container is stuck or unresponsive, and it will automatically restart the container. If the check fails for a defined number of times, the container is killed and restarted.
+
+We are checking containers health and If it stuck due to some reason, containers get restarted or newly created, only containers created, not pod.
+
+Why Use livenessProbe?
+To detect and recover from crashed, hang, or deadlocked applications.
+To enable self-healing of pods without human intervention.
+To avoid manual restarts or full pod redeployments.
+-----------------------------------------------------------------
+1. LivenessProbe (Is the app still alive and functioning?)
+vi liveneesscheck.yml
+kind: Pod
+metadata:
+ name: mypod
+spec:
+ containers: 
+   - name: mycont
+     image: ubuntu
+	 commnad: ["/bin/bash", "-c" "touch /tmp/myfile; sleep 10000"]
+	 
+	 livenessProb:         # Define the health check prob
+	   exec:
+	     commnad:          # run below command continuesly to check success or failure.
+		   - cat
+		   - /tmp/myfile
+		   
+	intialDelaySeconds: 5  # Wait for 5 second to get ready containers once it create.
+	periodSeconds: 5       # Continuesly check after every 5 second
+	timeoutSeconds: 30     # wait upto 30 second max for the commnad to response.
+------------------------------------	
+kubectl apply -f liveneesscheck.yml
+mypod is created.
+
+kubectl describe pod mypod      # To check health status.
+Now go inside the containers and delete the /tmp/myfile file so that containers get restarted automatically.
+
+kubectl exec mypod -it -- /bin/bash   # go inside the containers.
+ls /tmp/
+cat myfile
+
+rm -rf myfile     # Intentionally delete the file to check faiure response.
+
+kubectl get all   # Pod is working
+kubectl describe pod mypod  # to check failure response and containers are newly created.
+kubectl delete -f livenessProb.yml
+-----------------------------------------------------------------------------
+2. Readiness ( check container are ready to take load/ or Serve Traffic )
+
+In Kubernetes, a readiness probe is a mechanism used to determine whether a container is ready to start accepting traffic. (i.e., ready to serve requests).
+It tells Kubernetes when the application inside a container is ready to serve requests.
+
+If the readiness check fails, the pod is marked unready, and it is removed from the Service load balancer (Temporarily) (i.e., no traffic is sent to it). Once it passes, the pod is added back to the load balancer. Kubernetes regularly checks the health of the container using the defined probe (HTTP, TCP, or command).
+
+Why It's Important ?
+Even if a container is running, your app might still be:
+Loading data, Initializing services, Starting up slowly.
+
+Until it's ready, we don't want Kubernetes to route traffic to it — that’s where the readinessProbe helps.
+
+You can configure a readinessProbe using: httpGet, tcpSocket, exec.
+--------------------------------------------------------------------
+vi readinessprob.yml
+kind: Pod
+apiVersion: v1
+metadata:
+   name: mypod
+   labels:
+   value: test
+spec:
+ containers:
+  - name: C00
+    image: httpd
+	ports:
+	 - containerPort: 80
+	 
+  readinessProb:
+    intialDelaySeconds: 10   # Delay 10 second,it start from once container created.
+	httpGet:
+	 path: /      # It check by running curl http://localhost/ under / dir
+	 port: 80     # Specific port to check
+-----------------------------------------------
+kubetcl apply -f readinessProb.yml
+kubectl get all
+kubetcl describe pod mypod
+
+*******************************************************************************************
+Lecture:73
+Namespace: Basically namespace is like a private area/space where we can deploy pod and run the services.
+
+In Kubernetes, a namespace is a logical partition used to divide cluster resources between multiple users or teams. It allows you to organize and manage resources such as pods, services, deployments, etc., within isolated environments.
+
+Why Use Namespaces?
+To separate environments like dev, test, and prod.
+To support multi-tenancy (e.g., multiple teams sharing a cluster).
+To apply resource limits (CPU, memory) per namespace.
+For better access control using RBAC (Role-Based Access Control).
+
+Default Namespaces in Kubernetes
+Kubernetes includes a few namespaces by default:
+
+default – For resources with no specific namespace.
+kube-system – For Kubernetes system components (e.g., kube-dns, kube-proxy).
+kube-public – Publicly readable namespace, mostly used for cluster info.
+kube-node-lease – Manages node heartbeat leases
+	 
+1.How to Work with Namespaces:
+kubectl create namespace Dev              #Create a Namespace.
+kubectl create namespace SIT
+kubectl create namespace Production
+
+2. 
+kubectl apply -f deployment.yaml -n Dev   #Deploy to a Specific Namespace:
+kubectl apply -f deployment.yaml -n SIT
+kubectl apply -f deployment.yaml -n Production
+
+3.
+kubectl get pods -n Dev                  #View Resources in a Namespace.
+kubectl get pods -n SIT  
+kubectl get pods -n Production
+
+4. Set a Default Namespace (in kubeconfig):
+kubectl config set-context --current --namespace=dev
+
+5. To check all namespace:
+kubectl get namespace
+--------------------------------------------------------IMP---------------------
+vi nsdev.yml
+kind: namespace
+apiVersion: v1
+metadata:
+   name: Development            # Development namespace
+---------------------
+vi nstesting.yml
+kind: namespace
+apiVersion: v1
+metadata:
+   name: Testing                # Testing namespace
+---------------------
+vi nsprodduction.yml
+
+kind: namespace
+apiVersion: v1
+metadata:
+   name: Production              # production namespace
+-------------------------------------------------------------
+If we create any pod. it goes inside default namespace, but if we create any pod inside namespace then we have to mentioned namespace explictly to check pods -
+Now create one pod and then add inside namespace.
+
+1.Create yaml file
+vi mypod1.yml
+kind: Pod
+apiVersion : v1
+metadata:
+ name: Test-pod
+
+spec:
+ container:
+   - name: C001
+     image: ubuntu
+	 command: ["/bin/bash", "-c", "while true; do echo "hello"; sleep 5; done"]
+------------------------
+2. Add now in namespce:
+kubetcl apply -f mypod1.yml -n developemt
+kubectl apply -f mypod1.yml -namespace developemt  0r # we have added pod inside namespace developemt.
+
+kubetcl get pods
+No resource found in default namespace 
+
+kubetcl get pods -n development              # We have to specify namespace now.
+kubectl delete pod Test-pod                  # Not work
+kubctl delete pod Test-pod -n development    # This will work
+
+kubectl delete namespace development         # It will delete everything inside namespace (IMP).
+
+If want to set default namespace then need to update configuration as below:
+
+kubectl config set-context $(kubectl config current-context) --namespace=testing   # this is the command now onwards testing will be taken as a default namespace for all new resources.
+
+kubectl config view | grep namespace:   # to check which namespace has set
+
+---------------------------------------------------------------------------------------
+Lecture 73:
+Secrets and configMaps:
+
+In Kubernetes, a Secret is an object used to store sensitive information, such as:
+Passwords
+OAuth tokens
+SSH keys
+TLS certificates
+API keys
+
+Instead of hardcoding this sensitive data in your application code or pod definition, you can store it securely in a Kubernetes Secret and reference it as needed.
+
+Why Use Secrets?
+Keeps sensitive data separate from application code.
+Avoids exposing credentials in YAML files or Docker images.
+Data can be encrypted at rest (if enabled).
+Can be mounted into pods as environment variables or files.
+
+Types of Secrets ?
+Opaque (default) – Arbitrary key-value pairs (most commonly used).
+kubernetes.io/dockerconfigjson – For Docker registry credentials.
+kubernetes.io/tls – For TLS certs and keys.
+-----------------------------------------------------------------------
+configMaps:
+In Kubernetes, a ConfigMap is an object used to store non-sensitive configuration data as key-value pairs. It helps you decouple configuration from application code — allowing you to change configurations without rebuilding your container images.
+
+Why Use ConfigMaps?
+To externalize application configuration.
+To avoid hardcoding config values (like URLs, ports, file paths) inside your container or code.
+To make configuration changes without restarting or rebuilding the image.
+To share configuration across multiple pods.
+
+Use Cases
+Database connection strings (non-sensitive)
+Application settings (log level, feature flags)
+Environment-specific values (URLs, ports)
+Configuration files
+
+How to Create a ConfigMap ?
+1. From Command Line:
+kubectl create configmap my-config --from-literal=APP_ENV=dev --from-literal=APP_PORT=8080
+
+2. From a YAML file:
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+data:
+  APP_ENV: "dev"
+  APP_PORT: "8080"
+
+3. From a properties/config file:
+kubectl create configmap my-config --from-file=config.properties
+-------------
+Second Ex:
+Real-World Scenario Example, You have an application that needs:
+
+1.An environment name (e.g., dev, prod)
+2.A log level (e.g., debug, info)
+3.A backend URL
+
+First create one configMap from yaml file:
+
+configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config         # It should be match
+data:
+  ENV: dev
+  LOG_LEVEL: debug
+  BACKEND_URL: "http://backend.dev.local"
+----------------------------------------------
+kubectl apply -f configmap.yaml
+
+Now Use ConfigMap in a Pod (Environment Variables);
+
+MyPodConfig.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: app-pod
+spec:
+  containers:
+  - name: myapp
+    image: busybox
+    command: ["/bin/sh", "-c", "env; sleep 3600"]
+    envFrom:
+    - configMapRef:
+        name: app-config     # It should be same as above
+-----------------------------------
+kubectl apply -f MyPodConfig.yaml
+kubectl logs app-pod               #When you run kubectl logs app-pod, you will see below data
+
+ENV=dev
+LOG_LEVEL=debug
+BACKEND_URL=http://backend.dev.local
+
+-----------------------------------------------------------------------------------
+kubectl get configmap
+kubectl describe configmap app-config
+kubectl get pod app-pod -o yaml
+--------------------------------------------------------------------------------------
+Creating secret accessing:
+1. Test File   a. Volume  b. ENV      # we can access via volume and Env variables.
+2. Yaml file   ENV only               # we can access via env variables only.
+-----------------------
+1. Secrete object:
+
+echo "root" > username.txt
+echo "password" > password.txt
+
+To create a secrete object from text file: object name is "my-secrete"
+kubctl create secrete generic my-secrete --from-file=username.txt --from-file=password.txt
+
+kubectl get secretes   # To see the all secrete objects.
+
+# Secrete object stored in tmpfs file location, its temporary memory.
+
+Now we will see how this secrete object is access within the containers, create one yaml file:
+
+vi volsecrete.yml
+kind: Pod
+apiVersion : v1
+metadata:
+ name: MyVolSecrete
+ 
+spec:
+ container:
+   - name: C1
+     image: centos
+	 command: ["/bin/bash", "-c", "while true; do echo "hello"; sleep 5; done"]
+	 
+	 volumeMounts:
+	   - name: testsecrete
+	   mountPath: "/tmp/mysecrete"  # Volume creating inside container
+	   
+	  volumes:
+	   - name: testsecrete          # volume mount name
+	   secret: 
+	   secretName: mysecrete        # this should match with the secret object name.
+-----------------------------
+kubectl apply -f volsecrete.yml
+kubectl get all
+kubectl exec podname -it -- /bin/bash  # go inside the container
+cd /tmp/mysecrete                      # go inside volume path
+cat username.txt 
+cat password.txt
+
+-----------------------------------------------------
+2. Now access via environment variables:
+1. Create a .env File
+Cat > .env
+# secrets.env
+DB_USER=admin
+DB_PASSWORD=MySecretPass123
+
+2. Create Kubernetes Secret from .env File
+kubectl create secret generic db-secret --from-env-file=secrets.env
+
+3. Access Secret in a Pod (as Environment Variables)
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secret-env-demo
+spec:
+  containers:
+  - name: myapp
+    image: busybox
+    command: ["/bin/sh", "-c", "echo DB_USER=$DB_USER && echo DB_PASSWORD=$DB_PASSWORD; sleep 3600"]
+    envFrom:
+    - secretRef:
+        name: db-secret
+------------------------------------
+When you run: kubectl logs secret-env-demo, it will print:
+DB_USER=admin
+DB_PASSWORD=MySecretPass123
+--------------------------------------------------------------------------------
+Lecture 75 and 76 : Resource (CPU and RAM) Not imp
+-----------------------------------------------------
+Lecture 77: ResourceQuota and LimitRange 
+
+In Kubernetes, both LimitRange and ResourceQuota are mechanisms used to control and manage resource usage (CPU and memory) in a cluster — especially in multi-tenant or shared environments.
+They help prevent any one team, app, or namespace from overusing cluster resources.
+
+ResourceQuota : Entire containers can used resource up to define limit.  ex. 4 GB
+LimitRange: Each container can used up to define range: each container can used 4 GB.
+
+1. LimitRange
+A LimitRange sets default and maximum/minimum limits for pods or containers within a namespace.
+Enforce minimum and maximum values for CPU/memory.
+
+If a pod doesn't specify resource requests/limits, the defaults will be applied.
+Containers can't request more than 1 CPU or 1Gi memory in this example.
+Ex:
+
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: limit-range
+  namespace: dev
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "250m"
+      memory: "256Mi"
+    max:
+      cpu: "1"
+      memory: "1Gi"
+    min:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Container
+-----------------------------
+2.ResourceQuota
+
+A ResourceQuota limits overall resource usage per namespace, such as:
+
+Total number of pods
+Total CPU/memory usage
+Number of services, secrets, etc.
+
+Purpose:
+Prevent any one namespace from consuming excessive cluster resources.
+Helps in capacity planning and cost control.
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: dev-quota
+  namespace: dev
+spec:
+  hard:
+    pods: "10"
+    requests.cpu: "2"
+    requests.memory: "2Gi"
+    limits.cpu: "4"
+    limits.memory: "4Gi"
+---------------------------------
+Explanation:
+Max 10 pods in the namespace.
+Total requested CPU across all pods ≤ 2 cores.
+Total memory limit ≤ 4Gi.
+------------------------------------------------------------------
+
+
+
+
+
+   
