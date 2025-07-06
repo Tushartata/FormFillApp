@@ -1,0 +1,383 @@
+1. Git + Maven + Jenkins
+2. Ansible and terraform
+3. Docker + Kubernetes
+4. Prometheus, Grafana, CloudWatch
+5. AWS (EC2, S3, VPC, IAM)
+-------------------------------------------------
+DevOps Tools & Skills
+• Version Control: Git & GitHub  (Git LAB)
+• Build Tools: Maven 
+• CI/CD Tools: Jenkins 
+• Containerization: Docker, Kubernetes, Helm
+• Infrastructure as Code (IaC): Ansible, Terraform
+• Cloud: AWS (EC2, S3, VPC, IAM)
+• Monitoring & Alerting: Prometheus, Grafana, CloudWatch, SNS
+• Web/Application Servers: Tomcat
+• Operating Systems: RedHat Linux, CentOS, Ubuntu, Amazon Linux, Windows
+
+AWS Certified SysOps Administrator – Associate 
+--------------------------------------------------------------------------- 
+Terraform: Iam user   (Lecture 79) IAM:Identity and Access Management
+Identity and access management: 1.user 2.group 3.permission/policy 
+AWS account, we can provide user to login as IAM user with email id and password.
+Login to AWS account with root users:
+Search IAM --> users --> create user --> user_name(Tushar) --> next ---> create user.
+
+S3: Simple storage service
+SNS: Simple Notification Service.
+
+Lecture:80
+Ansible: Configuration Management tool. i.e inside machine only , .yml file, this develop in python language , redhat owner,  
+Terraform: Infrastructure Provisioning Tool which help to create EC2, S3 etc all the functionality via script instead of GUI. Inside cloud infrastructure, .tf file , this develop in Go language, HashiCorp HC.
+
+GUI ---> GUI/Console  (username/password required)
+CLI ----> A. Command 
+          B. Script (Access key and secrete key)
+
+B.Script ---> a. Cloud Formation (only for AWS)
+              b. Terraform (AWS, Azure, GCP etc.)
+With the help of Cloud Formation we can manage only AWS infrastructure, But terraform we can manage all cloud infrastructure (AWS, Azure, GCP etc.)
+-----------------------------------------------------
+How to install terraform ? Windows machine
+Search on browser : terraform (www.terraform.io)  --> Download for windows: c:\terraform
+then set up environment variable.  (system variable) path --> new --> c:\terraform
+-------------------
+1) Download Terraform in your system.
+2) Install AWS CLI package in same system.
+3) Create IAM user with full admin access.
+
+Now install same in EC2 machine for redhat OS - choose Redhat machine:
+
+/EC2 instance -->redhat(9), 10GB,
+
+sudo yum update -y
+sudo yum install wget unzip -y
+/home/ec2-user/
+mkdir terraform
+cd terraform
+ls
+pwd
+/home/ec2-user/terraform
+----------
+sudo yum install -y yum-utils        # from Google
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+sudo yum -y install terraform
+----------or do below------
+/home/ec2-user/terraform
+wget https://releases.hashicorp.com/terraform/1.11.4/terraform_1.11.4_linux_386.zip
+unzip terraform-1.9.0.
+ls
+sudo mv terraform /usr/local/bin  (It same as setting environment variable) just need restart system.
+init 6
+terraform --version
+----------------------------
+2.)
+Now we need "AWS CLI" package in redhat machine as it required:  Search on browser "AWS CLI for Redhat"
+
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+aws --version
+
+3.)
+Here, we need to create one IAM user so that user should have permission to create AWS infrastructure, will provide Admin access.
+
+IAM --->Users -->create user ---> name --> select (attach policy directly) --> AdministratorAccess --> Next ----> Create User.
+
+Created terraform_user   (IAM user)
+
+(Once user created, create access key and secrete key. Also, create key pair in advance for Window and Linux instances from AWS account. EC2-->Key Pairs -->Create key pair.
+
+{Description: We required one IAM user to create AWS infrastructure with the help of "AWS CLI package" install in Laptop or EC2 instance }
+
+Lecture 81...
+ingress: Incoming traffic
+egress: outgoing traffic 
+
+Note:Only one .tf file should be present in one folder.
+pwd
+
+First loggedIn to the EC2 instance with the below command to mapped user with IAM user:
+aws configure --profile terraform_user    ( Enter, it will prompt key and password)
+AWS Access Key ID:                        # IAM user credentials
+AWS Secrete Access Key:                   # IAM user credentials
+
+/home/ec2-user/
+cat Linux-instance-creation.tf
+provider "aws" {
+  profile    = "terraform_user"                           # IAM user name
+  access_key = "AKIAR7V3PGVNOR6VO6XI"                     # IAM User credentials
+  secret_key = "SWqIQ6Nm2Hq1iLZ64XvQ7qzRGhtVLiEUZCgA71"   # IAM User credentials
+  region     = "ap-south-1"
+               }
+resource "aws_instance" "example" {
+  ami           = "ami-04a37924fffe27da53"
+  instance_type = "t2.micro"
+  key_name      = "terraform-linux"
+  security_groups = ["${aws_security_group.allow_ssh.name}"]
+  tags = {
+    Name = "Linux-instance"
+  }}
+resource "aws_security_group" "allow_ssh" {
+  name        = "allow_ssh"
+  description = "allow ssh traffic"
+  ingress {
+    from_port   = 22  # by default, linux server listens to TCP port 22 for SSH
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+/home/ec2-user/terraform    (only one .tf file should be present in one folder)
+terraform init      # All dependencies would downloaded first to run the .tf file (Mandatory 1st time)
+terraform validate  # to validate the script (syntax in .tf file)   (Non-mandatory)
+terraform fmt       # Terraform format to arrange the format automatically.
+terraform plan      # to show the plan/script details (validate the key-value pairs) (Non-mandatory)
+terraform apply     # to run the script (Mandatory)
+
+terraform destroy   # It will delete the already created instance by terraform.cf file.
+--------------------------
+Create four instance with different name:
+vi Create_instance_name.tf
+provider "aws" {
+  profile    = "terraform_user"                           # IAM user name
+  access_key = "AKIAR7V3PGVNOR6VO6XI"                     # IAM User credentials
+  secret_key = "SWqIQ6Nm2Hq1iLZ64XvQ7qzRGhtVLiEUZCgA71"   # IAM User credentials
+  region     = "ap-south-1"
+               }
+variable "different_name"{
+type=list
+default=["web-Server","DB-server","Sai-server","Hari-server"]  # It should match with count
+}
+
+resource "aws_instance" "example" {
+ami="ami-04a37924fffe27da53"
+tags={
+Name=var.different_name[count.index]    #count.index is fixed
+}
+instance_type=t2.micro
+count=4                                 # It should match with four name
+key_name="terraform_Linux"
+}
+-------------------------------------------
+Run the above file:
+terraform apply -auto-approve    # this is a command to run .tf file
+
+------------------------------------
+# First login with the terraform user on Linux server with below commands: (IMP)
+aws configure --profile terraform_user_name
+AWS Access Key ID[None]: ASV24566RUEW3453R0S                    #IAM user's details
+AWS Secrete Access Key [None]: SFkdlffSDSDdlkd1232342ASSDSD     #IAM user's details
+
+Then Now we need to run script with below commands for creating instance:-
+/home/ec2-user/
+terraform init      # All dependencies would downloaded first to run the .tf file (Mandatory 1st time)
+terraform validate  # to validate the script (syntax in .tf file)   (Non-mandatory)
+terraform plan      # to show the plan/script details (validate the key-value pairs) (Non-mandatory)
+terraform apply     # to run the script (Mandatory)
+
+If want to modify anything in existing (already created instance) we can use same command again and again.. i.e. terraform apply and "terraform init" is required to run in every new folder having script..
+
+terraform destroy # this command is use to delete same instance created by script.
+
+terraform apply  -auto-approve    # Yes is not required
+terraform destroy -auto-approve   # Yes is not required
+----------------------------------------------------------------------------------------
+VPC: Virtual Private Cloud:
+A Virtual Private Cloud (VPC) is a logically isolated network environment within a public cloud (like AWS, Azure, or GCP) where you can launch and manage your resources—such as EC2 instances, databases, and load balancers—securely.
+
+VPC consist of IGW, Route table, NACL, Subnet and Security Group.
+1 subnet = 1 available zone (AZ)
+Security group are state-full. i.e. out bound traffic bydefault is allowed.
+NACL are stateless.  (Network Access Control List)
+NACL has separate inboubd and outbound rules,and each rule either can allow or deny traffic.
+CIDR: CIDR stands for: "Classless Inter-Domain Routing".
+CIDR is a method for allocating IP addresses and routing that replaces the older class-based system (Class A, B, C, D).
+
+Why IGW is Required ?
+The Internet Gateway acts as a bridge between your VPC and the internet. Without it, even if your instance has a public IP, It won't be able to send or receive traffic from the internet.
+
+We don't have any control on public IP but we can assign our own private IP within VPC.
+(10.0.0.0/16) we can launch 2^16 instances. We have two types of server (web server and database server) (DB server publicly never accessible). (Public IP never assign)
+2^(32-16) = 2^16
+
+Here, two types of subnet : Private subnet and public subnet
+In AWS VPC, you can enable internet access for instances with public IPs only, i.e public subnet 
+1) Instance must be in a Public Subnet.
+2) Public IP or Elastic IP must be assigned to the instance if internet access is required.
+3) Internet Gateway(IGW) must be attached to the VPC.
+4) Security Group & NACL rules must allow traffic.
+Inbound: allow required ports (e.g., 22 for SSH, 80 for HTTP)
+Outbound: usually allowed all or the desired destination IPs only.
+
+Note: IMP
+You cannot assign a public IP to an instance in a private subnet.
+You cannot reach the internet without a NAT or proxy setup and IGW.
+
+1.We can create our own VPC in AWS ---> Search ---> VPC ---> Create VPC ---> IPv4 CIDR ---> 10.0.0.0/16  --> create VPC.
+
+Public Subnet: 10.0.1.0/24 (Web server)  i.e 2^8 = 256 IPs actual available(251 and 5 reserve)
+Private Subnet 10.0.2.0/24 (DB Server)  i.e 2^8 = 256 IPs actual available(251 and 5 reserve)
+2^(32-24) = 2^8
+
+a) Create Public and private subnet
+b) Create Route Table (RT) and assign it to public subnet (10.0.1.0/24 ) only.
+c) Create internet Gateway (IG) and Assign it to Route Table (0.0.0.0/0)
+d) Do port opening (22-ssh and 80-http)  so that web server can be access from internet.
+e) DB server can not access from outside/internet as having only private IP address and can't download anything from outside network.
+
+INTERNET -------> IG ----> RT -----> Public subnet  ---> Web Servers
+
+Route Table is used to control how network traffic is "directed" within the VPC — essentially defining the routing rules for your subnets.
+1.Route traffic to NAT Gateway to allow private subnets access to the internet without exposing them directly.
+2.Route traffic to the internet via an Internet Gateway (for public subnets).
+3.Direct traffic between multiple-subnets in the same VPC.
+
+Only web server can access outside/internet. But want to allow/access for mysql (DB server) then we have to use jump Server or Basting to access DB server.
+
+A Bastion Host (also called a jump box) is a special-purpose EC2 instance that acts as a secure gateway for accessing resources in a private subnet of your VPC.
+
+Launch new EC2 (Linux) instance under public subnet in My VPC,with enable public IP and port 22 open for myself (Only for my laptop).
+yum update -y 
+Copy Jump Server's private IP and open port(22) for this IP from DB server.
+DB server port 22-ssh need to open for jump server only so that they can access via jump server only.  i.e. Server to Server connectivity only (Jump Server ---> DB server)
+
+copy db.pem key to jump server (drag and drop)
+jump Server: ssh -i "db.pem" ec2-user@10.0.2.252
+
+point e) DB server can not access internet and can't update or download anything from outside network. To overcome this issue we have to use NAT Gateway here...
+----
+In AWS, a NAT Gateway (Network Address Translation Gateway) is a managed service that allows instances in a "private subnet" to access the internet, but prevents the internet from initiating connections back to those instances.
+(Internet request can originated only from DB server and not from outside, there is no port here and only having private IP and Elastic IP(Static Public IP)).
+----
+In AWS, NACL stands for Network Access Control List. It is a stateless firewall that controls inbound and outbound traffic at the subnet level in a VPC (Virtual Private Cloud).
+Evaluated in order from lowest to highest  (lowest no.- is a high priority)
+
+State-full : By default out-bond traffic is allowed for all ports.
+Stateless : Need to explicitly specify inbound and out-bond port to allow traffic.
+
+An ephemeral port in AWS (and in general networking) refers to a temporary, short-lived port number automatically assigned by the operating system for the client side of a connection. These ports are used when your application or instance initiates an outbound connection — for example, when an EC2 instance accesses the internet. Port range is - 1024-65535
+(AWS Makes this mandatory, if this port not open - can't access any services.)
+
+VPC Peering
+VPC flow logs
+VPC end points
+-----
+VPC Peering: 
+VPC Peering in AWS, is a networking connection between two Virtual Private Clouds (VPCs) that allows them to communicate with each other privately using private IP addresses — without using public internet.
+Direct, private communication between two VPCs.
+Supports cross-account and cross-region peering.
+Low-latency, high-bandwidth connection using AWS backbone.
+No transitive routing: VPC A ↔ VPC B is allowed, but A cannot reach VPC C through B.
+-----
+VPC Flow Logs: In AWS are a feature that enables you to capture information about the IP traffic going to and from, network interfaces in your Virtual Private Cloud (VPC).
+They record network-level metadata, such as: 
+Source and destination IP addresses, 
+Source and destination ports.  
+Protocol (e.g., TCP, UDP)
+Traffic action (Accepted or Rejected)
+Bytes sent/received
+-----------------------------------------------------------------------------------
+What is RDS ?
+Amazon RDS (Relational Database Service) is a managed database service provided by AWS that makes it easy to set up, operate, and scale a relational database in the cloud.
+
+RDS lets you run popular databases (like MySQL, PostgreSQL, SQL Server, Oracle, and MariaDB) without having to manage the database software, backups, patching, or hardware.
+
+MySQL,PostgreSQL,MariaDB,Oracle,SQL Server, Amazon Aurora (AWS's high-performance DB engine)
+
+Automated Backups: Built-in daily backups, snapshots, and transaction logs(Incremental Backup).
+High Availability: Support for Multi-AZ deployments for fault tolerance.
+Security: Integrated with IAM, KMS for encryption, and VPC for network isolation.
+--------------------------------------------------
+Prometheus and Grafana ?
+Prometheus and Grafana are popular open-source tools used for monitoring and visualizing system performance, especially in cloud-native environments like Kubernetes.
+
+Prometheus: Monitoring System
+What it does: Collects metrics from systems, applications, and services.
+Data model: Time-series data (metrics with timestamps).
+Storage: Stores data locally using an efficient time-series database.
+Alerting: Includes an Alert-manager to trigger alerts based on defined rules.
+
+Example Metrics Prometheus collects:
+CPU usage
+Memory usage
+HTTP request rates
+Application-specific metrics (like queue length, DB connections)
+----------
+Grafana: Visualization Dashboard
+What it does: Visualizes data from Prometheus (or other sources like InfluxDB, Elasticsearch, etc.).
+Dashboards: You can create rich, interactive dashboards with graphs, gauges, tables, and alerts.
+Data Sources: Grafana doesn’t collect data; it pulls it from sources like Prometheus.
+
+Common Use Case:
+Prometheus collects metrics from your application.
+Grafana connects to Prometheus and visualizes the data on dashboards.
+Alerts are configured in Prometheus or Grafana to notify when metrics cross a threshold.
+---------- 
+K8S setup:
+EC2 instance (Master)
+IAM role
+(install kubectl and eksctl)
+eksctl create cluster --name saidemy --region ap-south-1 --node-type t2.small 
+
+install git and helm
+download chart for Prometheus and Grafana.
+helm repo add prometheus-grafana https://prometheus-community.github.io/helm-charts  (download first)
+
+helm pull prometheus-grafana/kube-prometheus-stack
+ls cd kube-prometheus-stack ls
+cd templates
+kubectl get all  ()
+helm install PG prometheus-grafana/kube-prometheus-stack   (install) (PG name given)
+kubectl get all
+kubectl edit svc kube-prometheus-prometheus
+type: LoadBalancer   (update file)
+wq!
+kubectl get all
+Load balancers DNS name is created, we can use it, put it in browser and get prometheus gui.
+
+grafana auto install when we installed prometheus, plz check with below command:
+
+kubectl get all
+kubectl edit svc prometheus-grafana
+type: LoadBalancer   (new LB is created)
+wq!
+
+Load balancers DNS name is created, we can use it, put it in browser and get grafana gui.
+
+username: admin
+Default pass: prom-operator
+---------------------------------------------------------------------
+Lambda ?  (Developer + AWS) 
+---------------------------------------------------------------------
+Cloud Watch:
+Amazon CloudWatch is a monitoring and observability service provided by AWS. It lets you track performance, collect logs, set alarms, and visualize metrics for your AWS resources and applications.
+
+Common Use Cases:
+Monitor EC2 instance CPU, disk, and memory usage
+Set alarms to notify via SNS/email if load is too high
+Collect and search Lambda logs or ECS task logs
+Trigger auto-scaling based on CloudWatch metrics
+Schedule jobs (e.g., stop/start EC2 daily)
+--------------------------------------------------------- IMP
+In AWS, why billing notification can only be set from North Virginia ? 
+
+✅ 1. Billing is a global AWS service
+Your account billing and usage data is not tied to a specific region.
+
+But AWS needs a centralized location to store and expose billing metrics — and they’ve chosen N. Virginia (us-east-1) as that default.
+
+✅ 2. CloudWatch billing metrics are only published in us-east-1
+The special AWS/Billing namespace (for billing-related metrics) is only available in us-east-1.
+
+If you try to access billing metrics from any other region, they simply won’t exist there.
+
+✅ 3. SNS billing alerts must be created in the same region
+Since CloudWatch billing metrics only exist in N. Virginia, your SNS topic/notification must also be created in that region.
+----------------------------------- END -------------------------------
+
+
+
+
+
+
