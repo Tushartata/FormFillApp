@@ -1,0 +1,343 @@
+What is SonarQube?
+SonarQube is an open-source platform used for continuous inspection of code quality. It automatically reviews and analyses source code to detect:
+🐞 Bugs
+⚠️ Code smells (bad practices)
+🔐 Security vulnerabilities (SQL Injection)
+📏 Code duplication
+✅ Test coverage
+
+SonarQube is a tool that helps developers write better code by
+automatically checking it for issues such as bugs, code smells, technical
+debt, duplicated code, code/test coverage, and other potential
+problems.
+Key Concepts
+• Bug: A mistake in the code that causes errors or crashes when the
+program runs.
+• Code Smell: An indication that code may need improvement, even
+if it doesn't cause immediate problems.
+• Vulnerability: A security weakness in the code that could be
+exploited by attackers..
+
+Technical Debt: Problems resulting from quick fixes or short-cuts in
+the code, which may lead to more work in the future.
+• Duplicated Code: Repeating the same code in different places, making it harder to maintain.
+• Test Coverage: A measure of how much code is tested by automated tests; higher coverage typically leads to better quality.
+
+SonarQube: A Static Code Analysis Tool
+SonarQube is a static code analysis tool that can check code quality
+across over 27 programming languages by identifying:
+
+• Bugs
+• Code Smells
+• Security Vulnerabilities
+
+Testing Methods
+SonarQube supports the following testing methods:
+• Static Testing: Conducted on the code itself (static code analysis).
+• Dynamic Testing: Performed on the running application.
+Reasons to Use Static Code Analysis
+• Find Errors Early: Helps catch errors earlier in the development
+process.
+• Detect Over-Complexity: Identifies overly complex code that may
+be difficult to maintain.
+• Find Security Errors: Detects security vulnerabilities in the code.
+
+• Enforce Best Practices: Ensures adherence to best coding
+practices.
+• Automation & Jenkins Integration: Can be automated and easily
+integrated into Jenkins CI/CD pipelines.
+Components of SonarQube
+• SonarScanner: The tool that scans your code. This tool and the
+related plugin should be integrated into Jenkins.
+
+• SonarQube: The dashboard that displays the results of the code
+analysis.
+• SonarServer: The server that hosts SonarQube and stores the
+analysis data.
+
+-----------------------------------------------
+Install some additional Plugins: Maven Invoker,SonarQube Scanner, Artifactory,  
+
+Sonar: b773b6444a6cc5fd55788a73909ebf4b64fcde56
+
+Create a project in sonar and give a project name, project key and organisation key:
+create a one property file with name -
+
+vi sonar-project.properties
+sonar.verbose=true
+sonar.organization=tushartata
+sonar.projectKey=tushartata_retailonline
+sonar.projectName=retailonline
+sonar.language=java
+sonar.sourceEncoding=UTF-8
+sonar.source=
+sonar.java.binaries=target/classes
+sonar.coverage,jacoco.xmlReportPaths=target/site/jacoco.xml
+
+git add .
+git commit -m "properties file added"
+git push origin main
+email id/token git
+
+--------------Sonar qube jenkins file---------
+pipeline {                                    // 1  // Defines the start of the Jenkins pipeline block
+
+    agent any                                 // Specifies the pipeline can run on any available agent
+
+    environment {                             // 2  // Defines environment variables for the pipeline
+        PATH = "/opt/maven/bin:$PATH"         // Adds Maven's path to the system's PATH variable
+    }                                         // 2  // Ends the environment block
+
+    stages {                                  // 3  // Defines the stages block where multiple stages are declared
+        
+        stage("build") {                      // 4  // Creates a stage named 'build'
+            steps {                           // 5  // Defines the steps that will be executed in this stage
+                echo "----------- build started ----------"  
+                                              // Logs a message indicating the start of the build
+                sh 'mvn clean deploy -Dmaven.test.skip=true'  
+                                              // Runs Maven clean and deploy commands, skipping tests
+                echo "----------- build completed ----------"  
+                                              // Logs a message indicating the build completion
+            }                                 // 5  // Ends the steps block for 'build' stage
+        }                                     // 4  // Ends the 'build' stage
+
+        stage("test") {                       // 6  // Creates a stage named 'test'
+            steps {                           // 7  // Defines the steps that will be executed in this stage
+                echo "----------- unit test started ----------"  
+                                              // Logs a message indicating the start of unit tests
+                sh 'mvn surefire-report:report'  
+                                              // Runs the Maven Surefire report to execute unit tests
+                echo "----------- unit test completed ----------"  
+                                              // Logs a message indicating unit test completion
+            }                                 // 7  // Ends the steps block for 'test' stage
+        }                                     // 6  // Ends the 'test' stage
+
+        stage('SonarQube analysis') {         // 8  // Creates a stage named 'SonarQube analysis'
+            environment {                     // 9  // Defines environment variables specific to this stage
+                scannerHome = tool 'saidemy-sonar-scanner'  
+                                              // Sets the SonarQube scanner tool
+            }                                 // 9  // Ends the environment block for this stage
+
+            steps {                           // 10  // Defines the steps that will be executed in this stage
+                withSonarQubeEnv('saidemy-sonarqube-server') {
+                                              // Executes the SonarQube analysis within the SonarQube environment
+                    sh "${scannerHome}/bin/sonar-scanner"  
+                                              // Runs the SonarQube scanner tool
+                }                             // Ends the withSonarQubeEnv block
+            }                                 // 10  // Ends the steps block for 'SonarQube analysis' stage
+        }                                     // 8  // Ends the 'SonarQube analysis' stage
+
+        stage("Quality Gate") {               // 11  // Creates a stage named 'Quality Gate'
+            steps {                           // 12  // Defines the steps that will be executed in this stage
+                script {                      // 13  // Allows running custom Groovy script inside the pipeline
+                    timeout(time: 1, unit: 'HOURS') {  
+                                              // Sets a timeout of 1 hour for the quality gate check
+                        def qg = waitForQualityGate()  
+                                              // Waits for the quality gate result from SonarQube
+                        if (qg.status != 'OK') {  
+                                              // Checks if the quality gate status is not OK
+                            error "Pipeline aborted due to quality gate failure: ${qg.status}"  
+                                              // Aborts the pipeline if the quality gate fails
+                        }
+                    }
+                }                             // 13  // Ends the script block for the Quality Gate stage
+            }                                 // 12  // Ends the steps block for 'Quality Gate' stage
+        }                                     // 11  // Ends the 'Quality Gate' stage
+    }                                         // 3  // Ends the stages block
+}                                             // 1  // Ends the pipeline block
+
+-----------------------------------------------
+To create a jfrog account: 
+
+vi jenkinsfile{} It contains all credentails to connect other tools like (sonarqube, Jfrog, etc..) from backend configuration.
+ 
+
+Token need to be create: eyJ2ZXIiOiIyIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYiLCJraWQiOiJfOTVtVjVLbVNhUlhhV2dvVVJNUlZhbjRMekFMQUs0YlFLMTBoSGZxb0lFIn0.eyJzdWIiOiJqZmFjQDAxamhhcTkwOTk0cXFjMDk3YjR6cWUwcGVyL3VzZXJzL3R1c2hhcm1iMTMxNEBnbWFpbC5jb20iLCJzY3AiOiJhcHBsaWVkLXBlcm1pc3Npb25zL2FkbWluIiwiYXVkIjoiKkAqIiwiaXNzIjoiamZmZUAwMWpoYXE5MDk5NHFxYzA5N2I0enFlMHBlciIsImlhdCI6MTczNjY3NTM5NCwianRpIjoiMTVmNzFjMzMtYjM5Yi00ZTExLTljYTEtN2E0NTY4YzcyZjY0IiwidGlkIjoiYTBzcXZzMnpmODBsMCJ9.LFTw52XteND6w4XLJ9f-VyhqslwNv-xHazclUyQYFewjke_3xwSXSurq2MRL2qjwRH5mdDx3Sd38xoPgBYwXNFCTmYemwSZaGJP3cafEvkjsbBFncKSTH30hDGOqCD_cLb3uE-tjGv3hntUQB3uXazeWJkqWf7R0XPwsochyJOqvSlf8lI8r96nPK0tAgqKrvjY8AbCk3YfUH798LkqZL5Mc-WOzFYYyCc6xXdq8MI8Rt7E7RAhOtfKFkVcL8y0Wrha9nD7dIocxTXLlllZqx3-EZ1A8fQiKwL9ZtlXXM1M1joXnJBB9Gi2_ETh-eOAshit2_m2U3NgECPjdC31jEA
+
+Usernametusharmb1314@gmail.com
+Scopeapplied-permissions/admin
+Audience*@*
+Token ID15f71c33-b39b-4e11-9ca1-7a4568c72f64
+a0sqvs2zf80l0
+Expires In0 (never expires)
+---------------------------------------------------------------------
+Docker Compose: Manage multiple container at a time.
+select OS version 22.04 from aws cloud for docker compose --- 24.02 not support.
+sudo apt update -y
+
+apt install docker.io -y   //Docker would install and start automatically.
+service docker status
+apt install docker-compose -y   //to install docker compose now....
+which docker
+which docker-compose
+docker-compose up -d    // to create a default container in machine:
+docker image
+docker ps
+docker-compose down     // to stop and remove docker containers.
+docker-compose up -d one   // it will create only one container. (configuration file) docker.yml
+----------------------------------------------------------------------
+cat docker-compose.yml
+version: '3'
+services: 
+     one:
+     image: ubuntu
+     command: /bin/bash/ -c  "while true; do echo "Hi Tushar" sleep 5; done"
+     two: 
+     image: ubuntu
+     command: /bin/bash  -c  "while true; do echo "Hello Kajal" sleep 5; done"
+-----------------------------------------
+docker rmi ubuntu      // to delete image ---subsequently container also deleted.
+
+docker-compose up -d one
+docker ps
+docker-compose logs -f one
+
+docker-compose stop    // to stop the container ...it will not delete the container.
+
+
+docker ps : it shows all containers
+docker-compose ps -a : it shows all container created by compose only. 
+
+----------------------------------------------------
+Docker swarm: 
+port need to be open 2377 by default command given by manager server.
+
+Ex: Four nodes(servers) has been created, one is manager and three are workers.
+sudo su -
+apt update -y
+apt install docker.io -y
+docker info                 // It will give basis details of docker instance.
+
+(by default docker swarm is inactive: docker info | grep -i "swarm"  ) inactive will seen.
+
+docker swarm init    ( Run this command on Manager's machine-server) it will give one command which need to be run on other servers (workers-servers)
+
+like: docker swarn join --token srlnlvlnrfnsofojosfnosnf IP:2377
+
+docker service create -p 80:80 --name web nginx
+(It create one service "name is web", means create one task(container),and that container having nginx image ) 
+and port 80:80 should be open
+
+docker service ls   (To check created service name)
+ID        NAME     MODE         REPLICAS    IMAGE           PORTS
+ldncldc   web     replicated    1/1         nginx:latest    *:80->80/tcp
+
+docker service ps web
+ID      NAME    IMAGE         NODE       DESIRE STATE   CURRENT STATE               ERROR        PORTS
+NJJNCJ  web.1  nginx:latest   ip:.. ..   Runing         Running about a minute ago
+
+To check details and find the server IP where task has been created. (Managers or workers node)
+
+docker ps -a
+CONTAINER ID    IMAGE        COMMAND            CREATED        STATUS       PORTS       NAMES
+ddfdff45343   nginx:latest   "/docker-enterpo"  2 minute ago   up           80/tcp      web.1....
+-------------
+To scale the services more than 1:
+
+docker service ls   (To check created service name)
+ID        NAME     MODE         REPLICAS    IMAGE           PORTS
+ldncldc   web     replicated    1/1         nginx:latest    *:80->80/tcp
+
+docker service scale web=3
+(it will create 3 more services on machine/containers  i.e. scale-up)
+
+docker service scale web=2
+(it will scale down the service to two from three)
+
+docker service inspect --pretty 
+
+docker service rm web    
+(To delete or remove container from all nodes/servers)
+
+docker service ls  (To check container remove or not).
+docker ps -a
+
+docker node ls   (It shows list of node and their manager/leader)
+CONTAINER ID      HOSTNAME 	          STATUS    AVAILABILITY    MANAGER STATUS
+adsddfdvfdv       ip-172-31-5-213     Ready     Active          Reachable
+dcdfdvfvfbp *     ip-172-31-5-214     Ready     Active          Leader           (* Means manager/leader)
+zzzfdvffbfb       ip-172-31-5-333     Ready     Active                           (Normal worker machine) 
+aasssaasass       ip-172-31-5-222     Ready     Active          Reachable
+
+Reachable: if manager is not down then reachable work as a manager (like standby manager/backup)
+drain: if any machine(container)we declare as a drain then task won't execute on that container
+reboot: To restart the all nodes/container/servers     (IMP) 
+  
+docker node promote ip-172-31-5-213     (To declare node as reachable if manager is not available)
+docker node ls
+docker node promote ip-172-31-5-222    (one more reachable container)
+
+-------------
+docker service create --replicas 3 -p 80:80 --name web nginx     (to create 3 container of image nginx )
+docker service ls                                                (check the replicas: 3/3)
+docker service ps web
+ID      NAME    IMAGE         NODE       DESIRE STATE   CURRENT STATE              ERROR       PORTS
+NJJNCJ  web.1  nginx:latest   ip:.. 213   Running         Running about a minute ago
+klghdh  web.2  nginx:latest   ip:.. 214   Running         Running about a minute ago
+ffgsks  web.3  nginx:latest   ip:.. 222   Running         Running about a minute ago
+
+
+docker node update --availability drain ip-172-31-5-214
+
+(It implies that task would create on workers node only and not on manager/leader machine, we made a leader machine as drain so that task won't run on leader machibe, it only run on workers machine/container)
+
+docker node update --availability drain ip-172-31-5-214
+
+docker service ps web
+ID       NAME    IMAGE         NODE        DESIRE STATE   CURRENT STATE               ERROR        PORTS
+NJJNCJ   web.1   nginx:latest   ip:.. 213   Running       Running about a minute ago
+klghdh   web.2   nginx:latest   ip:.. 222   Running       Running about a minute ago
+azsers   web.3   nginx:latest   ip:.. 333   Running       Running about a minute ago
+ffgsks  \_web.3  nginx:latest   ip:.. 214   Shutdown      Running about a minute ago
+
+docker node update --availability active ip-172-31-5-214  (if need to remove drain from manager/leader)
+
+if need to update nginx lower version which is recommendate use below command:
+docker service update --image nginx:1.17.10 web
+
+if wish to back on older version i.e. latest version then command is:
+docker service update --rollback web
+------------------------------------------------------
+What is Nginx:-
+Nginx (pronounced "engine-x") is a high-performance, open-source web server and reverse proxy server. It is widely used for serving web content, handling high traffic loads, and as a load balancer or reverse proxy for distributed applications.
+
+Key Features of Nginx:
+Web Server:
+
+Serves static content like HTML, CSS, JavaScript, and images efficiently.
+Can also handle dynamic content with the help of FastCGI, SCGI, or uWSGI handlers.
+
+Nginx is highly popular in modern web development environments due to its performance, simplicity, and flexibility. It is often used alongside tools like Docker, Kubernetes, and CI/CD pipelines for building and deploying applications.
+
+--------------------------------------------------------
+
+
+
+
+
+
+Imperative: to give command directly.
+Declarative: to write command in a file.
+
+
+
+
+
+---------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
