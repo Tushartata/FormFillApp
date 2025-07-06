@@ -1,0 +1,614 @@
+IMP:    #Updated
+Important differences:
+1. Container: Container is a virtual machine
+2. DOCKER: Docker is a tool to create a virtual machine.
+-----------------------------------------------------
+Docker is a tool that performs/create operating-system-level virtualization.
+Docker is a tool used to create a lightweight virtual machine called a container in which we can deploy any type of application. Docker uses union file system and layered file system.
+Docker comes at deployment level.
+
+Container: A container is a lightweight, standalone and executable package of software that includes:
+. The application code
+. Dependencies (libraries)
+. Configuration file
+. System tool/runtimes
+
+having size in MBs, start-up in seconds, share host OS kernel.
+Where Virtual Machine are : having size in GBs, start-up in minutes, having own OS+kernel.
+
+We have to create a docker file having basic application like tomcat,Java,war file, which need to be share with developers to deployed same war file on different containers...
+
+Docker volumes: Volume is a directory inside container,  we can have multiple directory inside container but we have to declare any one directory as a volume so that we can share this volume with other container, in this volume same data will auto copy to another container's volume, like hard-link in Linux...
+We can have only one volume in one container...
+
+DATA can be copy from ec2 instances to container by using volume.
+and data can be copy from container to container.
+
+Docker image: Contains OS (very small)(almost negligible) + software
+Docker Container: Container is like a virtual machine which is created from docker image.
+Docker file: Describe steps to create a docker image.
+Docker hub/repository : Stores all docker image publicly.
+Docker daemon: Docker services
+
+To check docker volume: docker inspect container_name
+
+Docker Image: 3 ways to create a docker images:
+1. Take a image from docker hub
+2. Create a image from existing docker container
+3. Create a image from docker file.
+
+Use Operating System : Redhat for installation:
+
+Docker Installation:
+yum update -y
+yum install docker -y         To install docker in any OS system.
+service docker start          To start docker service
+chkconfig docker on           To auto start docker services if system restart
+-------------------------------------------------------
+docker --version   o/p Docker version 28.0.4, build b8034c0
+docker search ubuntu     (to search all available images for ubuntu OS or any)
+docker images            (to check available docker images in OS level)
+docker ps                it shows all running docker container (only running ps process)
+docker ps -a             it shows all container (both running and stop) 
+
+-------------------------INSTALATION------------------
+1. Take a image from docker hub:-
+
+docker run -it ubuntu /bin/bash    # "run" Create and start a container from a specified image and take you inside container...
+
+(first it pull image(ubuntu) from docker hub and create a new container; -it interactive terminal, bin/bash)
+-i: Runs the container in interactive mode (keeps the container running).
+-t: Allocates a TTY, so you get a terminal interface. This allows you to run a bash shell interactively inside the container.  (Shell is s/w means where you can type the command).
+
+docker run -d ubuntu  (Run a background container (detached mode))
+-d: Runs the container in detached mode (in the background). This will run the container in the background and return the container ID.
+
+Now your container is running means your lightweight virtual machine is running.
+---------------------------------------------------
+2. Map Ports:
+docker run -p 8080:80 nginx 
+(This maps port 80 inside the container to port 8080 on the host. This is often used to expose web services inside containers.)
+
+----------------------------------------------------
+3. Mount Volumes:
+docker run -v /path/on/host:/path/in/container ubuntu
+(This mounts a local directory to the container, which can be useful for sharing files between the host(Base machine EC2) and the container.)
+
+exit(switch to base machine) Once we exit then container stopped and need to start it again.
+
+(run command is used to create a new container and start a container)
+
+If the same command run again new container will be created with different name from the existing image.(not from docker hub now)
+(docker run -it ubuntu /bin/bash) 
+
+exit
+docker ps -a  (to check created container),it shows all container (both running and stop) 
+docker ps     it shows all running docker container (only running ps process)
+-----------------------------------------------------------------
+4. Docker pull
+If just want to pull image from docker hub:
+
+docker pull image_name  (It should be exact name that present at docker hub)
+docker pull centos      (Download an image from Docker Hub or a registry)
+docker pull redhat
+docker pull jenkins/jenkins
+
+--------------------------- OPERATION COMMAND ----------------------
+Name: myfirstcontainer
+
+docker rename old_name_container  new_name_container    (container should be stopped)
+docker start container_name   (Start a stopped container.)
+docker ps     (running container only)
+docker ps -a  (running and stopped container both)
+
+docker attach container_name   (to go inside container )
+docker stop container_name      (to stop a running container)
+docker rm container_name         (to remove one or more stopped containers.)
+
+docker build    (Build an image from a Dockerfile.)
+docker images   (List of all images on your system.)
+docker push     (Push an image to a Docker registry (like Docker Hub).)
+
+docker rmi      (Remove one or more docker images.)
+docker logs     (Fetch logs from a running container.)
+
+docker exec           (Run a command in a running container.)
+docker network ls     (List all Docker networks.)
+docker volume ls      (List all Docker volumes.)
+docker info           (Display system-wide information about Docker.)
+docker inspect        (Get detailed information about containers, images, volumes, or networks.)
+----------------------------------------------------
+5.Create image from existing docker container
+
+Container having additional software git and tree; and to create image from existing container.
+
+docker run -it --name myfirstcontainer ubuntu /bin/bash (To create new container first from docker hub) 
+apt update            (to update all packages for OS + Kernel level) (we r inside the container)
+apt install git -y    (to install new app as git) 
+apt install tree -y   (to install new app as tree)
+cat > mynewfile.txt   
+Hi Hello !! 
+Tushar sir....!!    (create a new file)
+
+-------- container ----> install software ----> create new image -----> image to new container
+
+If you exit again with exit, it will stop the container. So always Ctrl + P, Ctrl + Q to keep it running!
+
+docker commit myfirstcontainer new_image_name  (new image will be created). By default, Docker will pause the container while the commit process happens. If you don't want that, you can disable it with the --pause=false option.
+
+docker images     (check the new image (all images will be shown)).
+docker run -it --name secondcontainer new_image_name /bin/bash  (create new container from image).
+-----------------------------------------------------------------------------------------------
+6. First create a image from docker file and then --> create a container from docker image-->
+To create a container from Dockerfile:
+
+vi Dockerfile
+FROM ubuntu
+RUN echo "Hello Tushar..."
+...
+wq!   exit
+
+docker build -t test_image .    (. refer to current directory, it refers all data from Dockerfile)   
+                                (-t its tag name to the image creating)
+docker run -it --name test_container test_image /bin/bash  (To create and start a container)
+
+b) To create a Dockerfile with a different name:
+
+vi mydocfile
+FROM ubuntu
+RUN apt update -y 
+RUN apt install tree -y
+RUN apt install git -y
+COPY Liuxfile /etc        (To copy file from base machine to image)
+TOUCH /tmp/file
+
+A.docker build -t newimage . -f mydocfile (To create image from dockerfile name as mydocfile)
+B.docker images
+C.docker run -it --name mydoccontainer newimage /bin/bash (to create a new container)
+
+Note: docker hub: contains docker images only, whereas github contains any file/folder.
+
+Note: We can not directly create a new container from existing container... we have to create image first from container...
+This is because Docker doesn’t allow you to directly "clone" a container to create another one.
+
+-----------------------------------------------------------------------------
+Docker volume is perform an important role to copy data to another container's folder , it means common folder or shared folder among all containers.
+sharing can be (one to one) only .
+A. sharing only possible from container to container and one to one only.
+B. base machine to container i.e. EC2 --> container and vice-versa.
+C. Volume can only be declare while creating container. Most IMP.
+D. If container is having volume and want to create an image from that existing container, the image don't contain a volume, data would be present as a Normal folder.
+E. Docker file first instruction should be FROM.
+F. Only one volume possible in one container.
+
+1.
+Docker volume:    (D.File ----> Create Image -----> Create Container )
+Docker volume can be create from docker file:
+vi Dockerfile
+FROM ubuntu
+VOLUME ["/data"]        /data is a directory and declared as a volume at container level;
+
+docker build -t myimage_doc .   (new image will be create from dockerfile)
+docker run -it --name mycontainer_2 myimage_doc /bin/bash  (container will be create from image)
+
+ls             (we are inside the container now.)
+cd data/       (data/ become a volume now  )  
+cat > file.txt
+Hello Tushar, welcome to docker file !!!
+
+Now create another container from ubuntu image and attached a volume from existing container: 
+
+docker run -it --name mycontainer_3 --volumes-from mycontainer_2 ubuntu /bin/bash
+(here new container will be create and volumes also be create from existing container) 
+
+docker start mycontainer_2   (to start container)
+docker attach mycontainer_2  (to go inside container)
+ls
+-----------------------
+2. Docker volume can only be create directly while creating container: 
+docker run -it --name mycontainer_4 -v /tushar ubuntu /bin/bash      Here new directory will be create as tushar and declare as volume inside container.
+ls
+cd tushar/
+
+Note: Post creating container can't attached/create volume.
+
+3. Docker volume can be create from EC2 or base machine
+
+docker run -it --name mycontainer_5 -v /root:/raj ubutu /bin/bash 
+(here new directory will create with name as raj and declared as volume)
+
+Now whatever data present inside /root directory it will auto copy to the container under /raj directory.
+
+Note: to check the volume present or not use below command:
+docker inspect container_name
+
+docker volume prune       (Delete All Unused Volumes (Be Careful))
+
+Note: You can’t directly modify the volume of an already created container
+Docker containers are immutable once created — you can’t change the volume mounts after the container is created, even if it’s stopped.
+Attached volume to a running container is not possible.
+
+Why use docker Volume ?
+Persistence: Data remains present even after container is removed.
+Sharing: Easily share between multiple container (one to one only).
+
+A.Can we create a volume after creating container ?
+No, we can not create volume after creating container. We have to delete existing container then create again. 
+
+1. Create a new volume
+docker volume create my_new_volume
+2.stop the running container
+docker stop my_container
+3.remove the old container
+docker rm my_container
+4.Recreate the container with the volume
+docker run -d -v my_new_volume:/app/data --name my_container2  nginx
+
+Alternative use (docker cp): copy files in/out
+If you want to get data into/out without restarting:
+Copy from container to host:
+docker cp my_container:/path/in/container /path/on/host
+
+Copy from host to container:
+docker cp /path/on/host my_container:/path/in/container
+
+Note: This is just a one-time copy.
+
+------------------------------------------------------------------------------
+Web container:
+If container needs to be running continuously then we required -d (detach) mode to be use:
+
+docker run -td --name webcont -p 8080:80 ubuntu     (web container will be create)
+docker ps                                           (to check web container)
+docker exec -it webcont /bin/bash                   (to go inside container if detach mode is active)
+apt update
+apt install apache2 -y  
+cd /var/www/html
+cat > index.html
+Hello my Google ....
+
+service apache2 start  (to start apache2 service)
+port 8080 need to be open from EC2 instance from security group policy.
+then copy public ip from ec2 instances and paste to browser with port 8080
+ex: 272.22.32.43:8080
+---------------------------------------------------------------------------------
+Note: Container don't have public IP, hence we mapped port 80 from container to base machine.
+
+Create a volume at base machine and create container with httpd:
+
+docker run -td --name webcont2 -v /root:/var/www/html -p 8080:80 httpd        
+(Container name:webcont2, volume, httpd deamon)
+docker ps
+
+from base machine we are creating index.html file and it will auto copy to webcont2 and it execute.
+For ubuntu we have to use web package - apache2 for others use httpd
+
+-------------------------------------------------------------------------------------
+To create a image from docker file first:-
+vi dockerfile
+FROM ubuntu
+RUN apt update -y
+RUN apt install apache2 -y
+CMD ["apache2ctl", "-D","foreground"]     
+
+docker build -t saiimage2 .       (to create image from docker file, name saiimage2)
+saiimage2                         (OS ubuntu, apache2)
+docker images
+docker ps 
+docker run -td --name saicont1  -v /root:/var/www/html -p 8082:80 saiimage2  (first container)
+docker run -td --name saicont2  -v /root:/var/www/html -p 8083:80 saiimage2  (2nd container)
+
+Note: Container can't have the same name in same node..
+
+272.27.8.273:8082
+272.27.8.273:8083
+
+IMP: If any changes made in base machine it will auto update in both the container's index.html file.
+
+-----------------------------
+we can share the image with developers for that we copy image to docker hub (app.docker.com)
+docker login
+username:
+password:
+
+docker tag saiimage2 sai3cs/newsaiimage2      
+(first create new folder newsaiimage2, is a folder at docker hub).
+docker push sai3cs/newsaiimage2
+
+------------------------------
+to pull image from docker hub
+service docker start
+docker images
+docker ps 
+docker ps -a
+docker pull sai3cs/newsaiimage2
+-------------------------------------------------- 
+yum update docker -y
+touch /etc/containers/nodocker
+yum remove podman -y
+dnf -y install dnf-plugins-core
+dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+systemctl start docker
+systemctl enable docker
+
+systemctl status docker
+
+docker version
+docker run hello-world
+
+docker container prune -f    (One-liner to remove all stopped containers)
+
+--------------------------------------------------------------------------------------
+Lecture 62: Docker
+A :Docker : When we can create a single-container in docker. It's ideal for single-container applications. like a web server or database any one.
+B :Docker-compose : We can create multiple-container applications in docker compose.
+Primary Use Case: It’s a great when you need to run multiple containers at once, especially when those containers need to interact with each other (e.g., a web app container and a database container).
+Scope: It works with containers on a single host machine (local machine or a single server). manage multi-container applications on a single machine. It's ideal for development level, testing level. Not for production.
+Note: Not designed for production-level scaling or managing clusters of machines.
+
+C :Docker-Swarm: Docker Swarm is a "container orchestration tool" designed for managing a cluster of Docker nodes (machines). It allows you to deploy, manage, and scale Docker containers across multiple machines.
+Scope: It is designed for production environments where you need to scale applications across a cluster of machines (nodes).
+
+Basic Docker-Compose Commands:
+docker-compose up               # Start the services defined in your docker-compose.yml file.
+docker-compose up -d            # -d (detached mode): Run the containers in the background.
+                                # Builds images if they don’t exist. Creates and starts the containers.
+docker-compose down             # Stop and remove all containers, networks, and volumes created by docker-compose up.
+docker-compose ps               # List the containers that are running in the current docker-compose project.
+docker-compose build            # Build the images defined in your docker-compose.yml file.
+docker-compose logs             # View the logs of your services.
+docker-compose logs myservice   # View logs for a specific service.
+docker-compose exec             # Execute a command inside a running container
+docker-compose exec <service_name> <command>
+docker-compose exec web /bin/bash
+docker-compose stop             # Stop the services without removing the containers.
+docker-compose start            # Start the services that were previously stopped.
+docker-compose restart          # Restart services (stop and then start them).
+docker-compose pull             # Pulls the latest image for all the services defined in your docker-compose.yml file.
+docker-compose exec             # Run a command in a running container.
+docker-compose config           # Validate and view the final configuration from your docker-compose.yml file.
+
+Docker-compose: Ubuntu Machine 22.04 only.
+apt update -y
+apt install docker.io -y
+service docker status           # Docker is already running cause in ubuntu services are auto started.
+
+apt install docker-compose -y   # Need to install docker compose 
+which docker
+which docker-compose
+
+docker-compose up -d            # Build/pull image and then start container -d detached mode from .yml file.
+docker images
+docker ps 
+1-container
+2-container
+-------------------------------
+cat docker-compose.yml
+version: '3'
+services:
+  one: 
+     image: ubuntu
+       command: /bin/bash/ -c "while true; do echo 'Hello Tushar';  sleep 5; done"
+
+  two: 
+     image: ubuntu
+       command: /bin/bash/ -c "while true; do echo 'Hello Kajal';  sleep 5; done"
+
+Note: Services: Services is collection of everything to create a container.
+
+-----------------------------------------------------------------------------------------
+docker-compose up -d one      #It pull the image and start only first services. i.e. create only one container here.
+docker ps
+docker-compose logs -f one    #It gives the logs of first container if only one container is running.
+docker-compose stop           # It just stopped the running container
+docker-compose rm             # it remove/delete the stopped container
+docker-compose images         # it gives images name created by .yml file.
+
+docker-compose exec one /bin/bash  #To go inside container, 
+
+docker-compose logs -f   # it will give logs of both/all containers.  i.e. Hello Tushar Hello Kajal...round robin model
+
+
+docker-compose up -d --scale one=3  # It will create two more containers for service one.
+
+------------------------------------------------------------------------------------------
+cat docker-compose.yml
+version: '3'
+services:
+  one: 
+    image: ubuntu
+    command: /bin/bash -c "while true; do echo 'Hello Tushar'; sleep 5; done"
+    deploy:
+      replicas: 3
+    restart: always
+
+  two: 
+    image: ubuntu
+    command: /bin/bash -c "while true; do echo 'Hello Kajal'; sleep 5; done"
+    deploy:
+      replicas: 2
+    restart: always
+-----------------------------------------------------------------------------------------
+Docker Swarm: 
+Docker-Swarm: Docker Swarm is a "container orchestration tool" designed for managing a cluster of Docker nodes (machines). It allows you to deploy, manage, and scale Docker containers across multiple machines.
+Scope: It is designed for production environments where you need to scale applications across a cluster of machines (nodes).
+
+One master and multiple nodes, master we can called manager and nodes we can called workers..node is nothing but a separate machine.
+3 nodes means we have three machines (three different IPs) ...and manager need to connect with all workers/nodes/machines.
+
+Advantage:-
+1: Auto management of containers (not creating/editing container manually here)
+2. Auto healing (new containers are created replace of crash containers.
+3. Auto Scaling: (Scale up and scale down automatically)
+4. Version Controlling.
+
+What is Service ? Service is something that we define in yml file and task is what that perform action on that define service. like creating containers, auto scaling etc.
+
+docker swarm not need to install, it just need to enable from docker...it is already there when we install docker only, In machine when we enable swarm that machine become a  manager...other machine become a workers.
+-------------
+We will create four machine in EC2, select ubuntu machine 22.04 , t2.micro, we have to open port 2377, 22, http, two workers are mandatory, we can't have only one workers...
+
+port 2377 is for manager connecting with workers node hence it is required.
+Port 2377 is the primary management port for Docker Swarm. This port handles the control plane traffic between Swarm nodes (i.e., managers and workers).
+All manager nodes (for receiving join requests from other nodes).
+This port is not used by containers or application traffic — just for Swarm cluster communication.
+--------------------------------------------------------------------------------------------
+Installation docker.io in all machines/nodes and enable docker-swarm in manager machine only.
+sudo su -
+apt update -y
+apt install docker.io -y
+
+On manager machine: Most IMP
+docker swarm init        
+# Once you hit this command the machine becomes a "manager" and it gives a one command that need to run on all worker's machine....(IMP) so that manager and workers machines are connected with each other.
+
+docker info | grep -i swarm   # To check swarm is active or not
+docker node ls                # To check Manager/leader machine.
+
+Imperative: To run the command directly on machine
+Declarative: To run the command via script/file.
+-----------------------------------------------------------------
+Now we are executing below command from manager machine: that will create only "one" container on any of the worker's machine. Sometimes may create container on manager machine itself.
+
+docker service create -p 8080:80 --name web nginx      #nginx: image name, web:container name, creating container i.e task
+
+Note: We have not define no.of services hence by default only one task (container) is created in any of the machine. In that container should have "nginx" image.
+
+docker service ls      # Service name is "web", It shows service name and task created details. i.e. number of task created.
+docker service ps web  # It gives you the IP of worker machine where task is executed...task name is web.1
+docker ps -a           # Container name will give web.1......
+
+docker service scale web=3    # Manager node will create 2 more task (container) as per manager's decision where to create(Nodes). 
+docker service ps web         # It gives you task id   (web.1   web.2  web.3) like
+docker service scale web=2    # Manager will delete one task (container), it will decide by manager which one need to be delete.
+docker service ps web         # It gives task id
+docker service inspect --pretty web  # It gives all details about service.
+
+docker ps -a                  # It gives container id
+docker service ps web         # It gives task id
+docker inspect (task id)      # It gives full container ID.
+
+docker node ls                # It gives server details about mangers and workers server's IP's/Name. check manager/worker nodes.
+docker node promote (Hostname) # It create a node become a reachable when leader is unavailable...
+docker node ls
+
+It gives leader server's IP as well, we can decide which server to be reachable in case leader is absent/unavailable...
+
+In docker swarm: Task is executed in all nodes including manger as well, but we can exclude it by using drain.
+Drain: When we want to exclude any one of the server that task should not execute in that server then we use drain:
+
+docker service ps web
+docker node update --availability drain (node ip)  # it will exclude the task (container) from this machine and shut-down container...
+docker service ps web
+
+docker node update --availability active (node ip)  # Again want to active already drained task.
+
+docker service ls                                  # It shows latest service nginx version
+docker service update --image nginx:1.17.10 web    # It updated nginx in defined version's i.e. 1.17.10 , version control....here all running task become shutdown and new task created with updated version image...
+docker service update --rollback web  # it updates/rollback to previous version of image.
+
+Auto Healing:
+docker ps -a                    # It gives container ID,
+docker stop <containerID>       # If we stop and remove any running container, automatically another container is created...
+docker rm containerID 
+
+docker ps -a                    # New container will be seen.
+-------------------------------------------------------------------------------------------
+We have one manager and three workers nodes here: (total four servers we have) ubuntu machine 22.04 os 
+Type of MODE: Replicated and Global
+
+When we use below command the 3 replicas are created, default mode is replicated, we can define replica like 2, 3, 4 any...
+
+docker service create --replicas 3 -p 8080:80 --name web nginx   # It create 3 replica/3 task/3 container on any three nodes...Runs 3 replicas (containers) of the nginx image.
+
+Note: docker service create --replicas 20 -p 8080:80 --name web nginx
+Yes, you can absolutely create 20 replicas in Docker Swarm, even with only 4 nodes (1 manager + 3 workers)
+You must have enough system resources (RAM, CPU) to run all 20 replicas.
+
+Global mode: Number of nodes = number of task...100 nodes then 100 task created.
+Lets create services in global mode:
+
+docker service create --mode global -p 8080:80 --name web nginx  # This will create 4 task/container (1 manger,3 workers node)  
+                                                                 If drain mode is not active in manger machine...
+------------------------------------------------------------------------------------
+Declarative mode: 
+Stack: Stack is a collection of service1, service2, service N ...and service is a collection of task1,task2, task N....etc
+We will create one yaml file here for docker swarm declarative mode:-
+
+vi docker-compose.yml
+---
+version: "3.4"
+services:
+  demoweb:           # Service name
+    image: nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - /tmp:/usr/share/nginx/html
+    deploy:
+      mode: replicated      #Default mode "replicated"  #Global mode need to specify manually if want
+      replicas: 2           # two task created
+--------------------------------------------------
+docker stack deploy -c docker-compose.yml web       # hit this command O/P like
+Creating network web_default
+Creating service web_demoweb
+
+stack name: web
+service name: web_demoweb
+task name: web_demoweb.task name 
+
+docker stack ls                    # It gives stack name  i.e web
+docker service ls                  # It gives service name  i.e web_demoweb
+docker service ps web_demoweb      # It gives task details....  i.e web_demoweb.1dmcdmd.....
+
+docker ps   # We can check the container here...name and all...
+If we stop and remove container, another container is auto created immediately...auto healing....that is called docker swarm....
+
+here we can create one index.html file and put the volume directory and provide permission as well. chmod 777 /tmp/  and use public ip and port 80 on browser....
+-----------------------------------------------------
+Docker swarm: how port mapping works here ?   (IMP)
+docker service create --replicas 3 -p 8080:80 --name web nginx
+
+.Creates a Swarm service named web
+.Runs 3 replicas (containers) of the nginx image
+.Maps container port 80 to host port 8080
+But in Swarm mode, port publishing works differently than in regular Docker:
+
+Swarm's Ingress Load Balancer Behavior:
+When you publish a port (-p 8080:80), Docker Swarm sets up "an ingress load balancer", and here's how it behaves:
+The service becomes available on every node in the swarm, even if the container is not running on that node.
+Incoming traffic to port 8080 on any node is forwarded to "one" of the service replicas (on any 1 node).
+Swarm uses IPVS-based routing to load balance between the 3 replicas.
+
+------------------------------    Docker Swarm END    --------------------------
+Docker Swarm:
+What it is: Native clustering and orchestration tool by Docker.
+Ease of use: Very simple to set up and use.
+Integration: Works tightly with Docker CLI and Docker Compose.
+Features: Basic container orchestration: service deployment, scaling, load balancing, rolling updates.
+Use case: Great for small to medium-scale apps or when you want something quick and easy.
+Learning curve: Low — beginner-friendly.
+
+Kubernetes:
+What it is: A powerful container orchestration platform originally by Google, now maintained by the CNCF.
+Complexity: Much more powerful and feature-rich, but more complex to set up.
+Features: Advanced scheduling, self-healing, service discovery, secrets management, custom resource definitions, Helm charts, auto-scaling, etc.
+Ecosystem: Huge. Widely adopted, lots of third-party tools and community support.
+Use case: Enterprise-level applications, microservices, large-scale production systems.
+Learning curve: Steeper, but worth it for larger or more complex needs.
+
+Docker Swarm = Simple, quick, less powerful.
+Kubernetes = Complex, powerful, industry standard.
+
+---------------------------------------------------------------------------------
+
+
+
+
+
+       
+
+
+
