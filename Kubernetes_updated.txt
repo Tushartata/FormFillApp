@@ -1,0 +1,327 @@
+(Ubuntu-20.04)Installation of Minikube & Kubectl   k8s installation
+
+--------------------------------------------------------
+Kubernetes also called as K8S. (8:letters) k..s
+K8S also called as Docker Swarm.
+K8S is a "container orchestration technology" that help to manage docker container.
+K8S originated in Google. Now it is open source.  CNCF (Cloud Native Computing Foundation).
+Orchestration is a set of tools that automate the management of containerized applications. 
+
+Definition: Kubernetes is an open-source container orchestration platform that automates the deployment, scaling, and management of containerized applications.
+
+--------------------------------------------------------
+Feature of Kubernetes:
+Orchestration (Grouping and Managing Containers running on different machine)
+Auto-Scaling (Auto creation of replicated containers)
+Auto-Healing (New containers in place of crash container)
+Load-Balancing (Distributed request to container)
+Fault Tolerance (Node/Pod Failures)
+Rolling Updated and Rollback (Going Forward/back to next/previous version)
+---------------------------------------------------------
+POD:
+Outer cover of containers, Consist of one or more containers.
+Entire pod will be hosted on the same node (Scheduler will decide about which node)
+It represents the smallest deployable unit in the kubernetes object model.
+
+Note: Containers don't have IP address but POD have IP address.
+------------------------------------------------------
+Role of master node:
+Kubernetes designated as one or more of these as master node and all others as workers node. 
+The master is going to run set of K8S processes. These processes will ensure smooth functioning of cluster.These processes are control plane.
+Can be multi-master for high availability.
+Master runs control plane to run cluster smoothly.
+In Kubernetes (K8s), the control plane is the brain of the cluster.
+-----------------------------------------------------------------------
+Components of the Control Plane:
+1.kube-api server
+This API server interacts directly with user (i.e. we apply yaml or json manifest to kube apiserver) 
+Kube-API server is front end of control plane.
+Kube-API server also interact with its worker nodes. (Indirectly via kubelet)
+
+2.etcd (cluster store)
+Stores complete information about cluster. (A distributed key-value store)
+Persists all cluster data (configuration, state)
+We also call it as source of touch.
+
+3.kube-scheduler (Pod)
+When users make a request for the management of pods, kube-scheduler is going to take action on these request.
+Kube-scheduler communicated with kubelet deployed on nodes.
+Kube-scheduler Assigns newly created pods to Nodes/servers.
+
+4.Controller-manager:(Node)
+Make sure actual state of cluster is to be desired state. i.e (Node/Servers)
+
+5.
+cloud-controller-manager (optional, used in cloud environments)
+Manages cloud-specific control logic (e.g., load balancers, volume provisioning)
+
+-----------------------------------------------------------------------
+Constituent of Node:
+Kubelet: Agent running on the worker node, Listens to kubernetes master, Port 10255, send success/failed report to master.
+In Kubernetes, kubelet is an agent that runs on "each worker node" in the cluster. It's a critical component that ensures containers are running as expected on that node.
+
+What Does kubelet Do?
+Receives instructions from the kube-apiserver (part of the control plane).
+Monitors the state of the pods assigned to its node.
+kubelet Communicates with the container runtime (like Docker or containerd) to:-
+   .Start and stop containers.
+   .Pull container images.
+Reports node and pod status back to the control plane.
+
+It works with the Container Runtime Interface (CRI) to interact with the underlying container engine.
+
+                [ Control Plane ]
+                    |
+      +-------------+-------------+
+      |                           |
+[kube-apiserver]         [scheduler, controllers]
+      |
+   communicates via API
+      |
+[ kubelet (on Worker Node) ] --> talks to container runtime
+      |
+[ Pods / Containers running here ]
+
+Docker Works with kubelet
+Pulling image from containers, Starting and stopping containers.
+Exposing container's port specified in manifest
+
+-------------------------------
+kube proxy:-
+kube-proxy is a networking component that runs on each node (both master and worker nodes). Its main job is to manage network traffic to and from Pods. 
+It is responsible to assign IP (private IP) to pods.
+
+kube-proxy is responsible for:-
+Routing traffic to the appropriate Pod behind a Service.
+Managing IP rules and iptables (or IPVS) to ensure traffic reaches to healthy pods.
+Handling load balancing across Pods in a Service.
+
+Kubernetes: Every task in K8S is considered as "object".
+            In swarm, we called service. In K8S we called "Object".
+-----------------------------------------------------------------------
+What is spec in Kubernetes yaml file ?
+
+The spec (short for specification) tells Kubernetes "what you want", not how to do it. Kubernetes then figures out how to make it happen using its controllers.
+“Hey, I want this many pods, running this image, with these labels, using this configuration.” like this...
+-----------------------------------------------------------------------
+What is kind? The kind field defines the "type of Kubernetes object" you want to create, like a Pod, Service, Deployment, ConfigMap, etc. Like kind: Pod → you're creating a Pod.
+
+Common kind values:
+Pod        :  Smallest unit — a group of containers
+Deployment :  Manages replicated Pods with rollout strategies
+Service    :  Exposes Pods internally or externally
+ConfigMap  :  Stores configuration data as key-value pairs
+Secret     :  Stores sensitive data (like passwords, tokens)
+Ingress    :  Routes external HTTP/S traffic to Services
+StatefulSet:  Like Deployment, but for stateful apps (e.g., databases)
+Job        :  Run a task to completion
+CronJob    :  Run jobs on a schedule
+Namespace  :  Logical cluster partition
+PersistentVolume : Defines storage in the cluster
+PersistentVolumeClIAM : Requests storage from a PV
+
+-----------------------------------------------------------------------
+eksctl : eksctl is a super handy CLI tool to manage Amazon EKS (Elastic Kubernetes Service) clusters.
+eksctl commands use for creating, managing, and deleting EKS clusters:
+
+1. Create a New EKS Cluster
+eksctl create cluster --name my-cluster --region us-west-2 --nodegroup-name my-nodes --node-type t3.medium --nodes 2 --nodes-min 1 --nodes-max 4 --managed
+
+2.List All Clusters
+eksctl get cluster
+
+3. Get Cluster Details
+eksctl get cluster --name my-cluster --region us-west-2
+
+4.Update a Node Group (e.g., change scaling settings)
+eksctl update nodegroup --cluster my-cluster --name my-nodes --region us-west-2
+
+5.Add a New Node Group
+eksctl create nodegroup --cluster my-cluster --name extra-nodes --node-type t3.large --nodes 2 --managed --region us-west-2
+
+6. Delete a Cluster
+eksctl delete cluster --name my-cluster --region us-west-2
+
+7. Create a Cluster Using a YAML Config File
+vi cluster.yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: my-cluster
+  region: us-west-2
+
+nodeGroups:
+  - name: ng-1
+    instanceType: t3.medium
+    desiredCapacity: 2
+
+wq!
+eksctl create cluster -f cluster.yaml
+----------------------------------------------------------------------
+Note: We can not stop cluster once it is created, but we can delete it once run below command cluster will be deleted and all nodes will be deleted.
+
+eksctl delete cluster saidemy --region ap-south-1
+(It takes 10 mins to delete the cluster)
+ 
+#####################################END####################################### 
+1st May 2025   Lecture 97 (Kubernetes cluster)
+
+In place of minikube, we are installing two package eksctl and kubectl: These tools are responsible to communicate from master to nodes and nodes to its pods. And IAM roles attached to the master server.
+
+We are going to launch only one master servers, worker nodes will be launch automatically by AWS.
+
+Name: K8S-Master
+Amazaon Linux, T2.medium,  25 GB, 
+
+Note: master server should be t2.medium and node can be t2.small
+-----------
+aws --version     (aws-cli/2.15.30  it is required)
+
+1.Kubernetes 1.32 version Download the "kubectl binary" for your cluster’s Kubernetes version from Amazon S3.
+
+curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.32.0/2024-12-20/bin/linux/amd64/kubectl
+
+2.Apply execute permissions to the binary:
+chmod +x ./kubectl
+
+3.Copy the binary to a folder in your PATH. If you have already installed a version of kubectl, then we recommend creating a $HOME/bin/kubectl and ensuring that $HOME/bin comes first in your $PATH:
+mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$HOME/bin:$PATH
+
+kubectl version    # check the version
+Client Version: v1.32.0-eks-5ca49cb
+Customize Version: v5.5.0
+------------------------------------------------------
+4.Now, we have to install EKS CTL :
+# for ARM systems, set ARCH to: `arm64`, `armv6` or `armv7`
+ARCH=amd64
+PLATFORM=$(uname -s)_$ARCH
+
+curl -sLO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_$PLATFORM.tar.gz"
+
+# (Optional) Verify checksum
+curl -sL "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_checksums.txt" | grep $PLATFORM | sha256sum --check
+
+tar -xzf eksctl_$PLATFORM.tar.gz -C /tmp && rm eksctl_$PLATFORM.tar.gz
+sudo mv /tmp/eksctl /usr/local/bin              (Setting environments variable)
+eksctl version
+0.193.0
+----------------------------------------------------|------------------------
+In AWS, If we want to connect any entities or service (without credentials) we use IAM roles.
+( Identity and Access Management.)
+IAM Role use for: users, group, permissions, role.
+Attached newly created role to k8s server -> Action-> Security -> modify Iam Role.
+
+Purpose of IAM role ? An IAM role is a set of permissions that grant access to AWS services without needing to share long-term credentials (like access keys or passwords). It's used to securely delegate access within or across AWS accounts.
+
+Now we are creating cluster here: (two worker nodes will be create automatically and connect to master)
+eksctl create cluster --name saidemy --region ap-south-1 --node-type t2.small
+(It takes 10 min to create a cluster and node can define as t2.small)
+
+Note: By default above command create two worker nodes automatically, but if we want more nodes then use "-count 5" in above commands.
+Also, If we delete any one of the node then AWS creates another node automatically and created nodes connected with master with the help of IAM roles.
+
+Now kubernetes setup is ready: two workers nodes are created, check in AWS. 
+----------------------------------------------------------------------------------------
+kubectl get node     # To check the cluster nodes.
+kubectl get pods     # don't have any pods as of now.
+----------------------------------------------------------------------------------------
+Now we are creating one simple pod:-
+1. Pod file.
+vi pod1.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: testpod
+spec:
+  containers:
+    - name: c00
+      image: ubuntu
+      command: ["/bin/bash", "-c", "while true; do echo hello Tush; sleep 10; done"]
+	  
+kubectl apply -f pod1.yml  # To create a pod.
+kubectl get all            # To check if the pod is created or not.
+kubectl get pods -o wide   # to check pod is created on which node, (-o:output)
+kubectl logs -f testpod -c c00  # to check the logs of node from master node.
+kubectl delete -f pod1.yml # to delete the running pods.
+
+Run all the above command from master node only...
+-------------------------------------------------------
+2. Deployable file
+vi deployhttpd.yml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mydeployments
+spec:
+  replicas: 4   # 4 pods will be created
+  selector:     # Tells the controller which pods to watch/belong to
+    matchLabels:
+      app: deployment  # Should match with service file label and deployment template.
+  template:
+    metadata:
+      labels:
+        app: deployment
+    spec:
+      containers:
+        - name: c00
+          image: httpd
+          ports:
+            - containerPort: 80    # all container having same port 80
+			
+3. Service File (LB)
+vi service.yml
+apiVersion: v1
+kind: Service   # Define the resource type as Service
+metadata:
+  name: demoservice
+spec:
+  selector:
+    app: deployment    # This should match the label in your Deployment or Pod spec
+  ports:
+    - port: 80         # Service port
+      targetPort: 80   # Port on the Pod to forward traffic to container port
+  type: LoadBalancer   # Type of the Service (ClusterIP, NodePort, or LoadBalancer)
+   
+kubectl apply -f deployhttpd.yml
+kubectl apply -f service.yml
+kubectl get all        # To get the all pods
+
+DNS name of LB:80
+
+Note: If we delete any pods, new pod is automatically created, same for node as well.
+when we delete service file, load balancer is also get deleted.
+
+kubectl delete -f service.yml  # Delete the LB first
+kubectl delete -f deployhttpd.yml 
+
+eksctl delete cluster --name saidemy --region us-east-1   # To delete the cluster
+ 
+---------------------------------  END   ------------------------------
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+ 
+	
+
+
+
+
+
+
+
+
+
+
+
