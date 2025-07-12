@@ -1,0 +1,150 @@
+maven - build
+sonarQube - quality code
+selenium - tester test code
+-----------------------------------------------------------------------
+git cammand
+vi/etc/hostame   (It is used to rename the hostname )
+init6            ( To restart the server )
+touch file{n1..n10}   to create multiple files
+github.com
+email:tusharmb1314@gmail.com/Tushar@1313   username:Tushartata
+
+Token:ghp_8iKuEPA6nkJ4S7b8BOULl7JJFmKdFA2yeGKt
+Sonar: b773b6444a6cc5fd55788a73909ebf4b64fcde56
+
+yum update -y
+yum install git -y
+which git 
+git --version;    (current version 2.40) # Java 21 is the current enterprise standard.
+git config --global user.name "tushar"
+git config --global user.email "tusharmb1314@gmail.com"
+git config --list   (to show user details name and email ID's)
+----------------------------------------------------------------------------------
+mkdir mumbaigit    ( create directory first )
+ls                  
+cd mumbaigit/        (go inside directory)
+git init             (then run the init command)
+ls -a                (to see hidden git files .git)
+vi myfile            (to create a file)
+ls -a                (to see hidden git files .git)
+git status           (check file status )
+git add .            (to add file in staging area/index area )
+git status
+git commit -m "first line"  (to add file in local repo area)
+git status
+ls -a
+git log
+git show e5b38f8
+git remote add origin https://github.com/SaiDevopsFaculty/cetralgit.git    (copy it from web)
+git remote -v       (it shows connection to central git hub)
+git branch          (it shows current branch name)
+git branch -M main  (it used to change branch name) rename branch
+git branch          (check new branch name)
+git branch mynewbranch  (to create new branch)   # We can create multile branches, no limit.
+git checkout mynewbranch  (switch to a new branch)
+git add .
+git commit -m "......"
+
+note: every branch having their own workspace and staging area, until we add and commit.
+
+ls -lrt
+git log             
+git push origin main
+username : email id of central github
+password : paste the token from central github
+-------------------------------------------------------------------
+vi myfile
+git status
+git add .
+git status
+git commit -m"second line"
+git log
+git show e0n7088
+git push origin main
+ls
+cat myfile
+git log
+cat myfile
+git log
+git pull origin main
+cat myfile
+git log
+git show f4b47a7be0
+vi myfile
+git add .
+git commit -m "fourth line"
+git push origin main
+history
+--------------------------------------------------------------------------
+git pull origin main:main
+git pull origin main:new
+
+git push origin main:main
+git push origin main:new
+
+git checkout new  (to switch to another branch)
+
+--------------------------------------------------------------------------
+GIT MERGE (PULL) : To copy files and commit id from one branch to another branch.
+
+git branch
+* main
+  new
+git merge new  (data from new branch will copy to main branch) (IMP)
+
+Note: If both branch having the same file-name then conflict will occurred, then goto file correct the code and then add and commit.
+vi filename
+git add .
+git commit -m "conflict corrected"
+---------------------------------------------------------------------------
+GIT IGNORE: to ignore any specific file or .class file, we have to mentioned such file name in gitignore file.
+
+vi .gitignore
+*.class
+git add .
+git commit -m "git ignore"
+--------------------------------------------------------------------------- (IMP)
+GIT RESET :To rollback the added file from staging area/index area. (Before commit)
+git reset filename or
+git reset .
+--------------------------------------------------------------------------- (IMP)
+GIT REVERT : To delete the commited file use revert command; It delete file from workspace, staging area as well.(deleted data would highlighted in red colour)
+
+git revert commit_code (2n73322ded7)
+git log --oneline                       #Single line details one line.
+
+
+"git revert is used to create a new commit that undoes the effects of a specific earlier commit, without modifying the project history. It’s ideal for production or shared branches."
+
+Use Case: (IMP)
+"If a deployed feature broke production, git revert lets us safely roll back that change while keeping the history intact."
+
+---------------------------------------------------------------------------
+GIT Clean : To delete the untracked files from workspace use the below command.
+git clean -n  Dry run (to preview).
+git clean -f  Actually delete untracked files.
+
+"git clean is used to delete "untracked files or directories" from the working directory, helping developers reset their workspace to a clean state."
+
+---------------------------------------------------------------------------
+GIT TAG: To mentioned any tag name to the commit id and can use commit tag to see data.
+git tag -a VERY IMPORTANT -m "this is very imp" commit_id
+git tag -a IMP -m "very important"  2n73322ded7
+git log --oneline
+git show IMP
+git tag           : to show all tag
+git tag -d IMP    : to delete the tag (Only delete tag)
+---------------------------------------------------------------------------
+GIT CLONE : If need to copy entire central repository(git-hub/bit-bucket) for new joinee/employee we can use clone command. need to copy url from git hub. (init not required, same name will be copy from central repository.)
+
+git clone URL
+
+---------------------------------------------------------------------------
+generate keygen:
+ssh-keygen
+id_rsa
+id_rsa.pub
+cat id_rsa.pub and copy key properly which required to paste in centralgithub ---->
+setting ---> ssh and GPG keys ---> add new ssh keys ---> paste key and save.
+(any number of keys can be added in centralgithub )
+---------------------------------------------------------------------------

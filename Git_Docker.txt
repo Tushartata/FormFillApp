@@ -1,0 +1,121 @@
+Git : Fetch and Pull
+What is the difference between git pull and git fetch  ?
+
+Git Pull: Pull the files and comments both.
+Git Fetch: Only fetch the files.
+
+"git fetch retrieves changes from the remote repository but doesn't change your local working branch. It lets you preview updates before merging."
+
+where as:
+"git pull is a combination of git fetch and git merge. It downloads changes and immediately tries to integrate them into your current branch." i.e git pull = git fetch + git merge
+
+-------------------------------------------------------------------
+How to pull specific files only from github/central repository ?
+
+"git cherry-pick" is a Git command that allows you to apply a specific commit from one branch to another.
+
+git checkout main                # Go in main
+git log                          # To find it.
+git cherry-pick <commit-hash>    # Call the files
+-----------------------------------------------------------------
+What is Git hooks and webhooks ?
+
+1. Git Hooks runs on Local machine or Git server, it Triggered by Git events (e.g. commit, push)
+Git Hooks is shell or scripts base.
+
+
+It is used to push code from git to the jenkins.  Git/github server ------> Jenkins Server. Same as POll SCM.
+Git hooks are scripts that Git automatically executes before or after certain events, such as committing, pushing, or merging changes in a Git repository.
+
+Git hooks:
+Automate tasks on the local system before/after Git actions.
+Local to the Git repository (in .git/hooks).
+Triggered by Git actions like commit, push, merge, etc. Works locally within a Git repository
+
+
+Webhooks are a way for one system (like GitHub, GitLab, or any other service) to send real-time information to another system by making an HTTP request when an event occurs.
+
+Webhooks runs on External server or CI/CD system (e.g. Jenkins, GitHub Actions), It Triggered by repository activity, sent via HTTP POST, It is URL endpoints with JSON payloads. Use case is - Trigger CI/CD builds, notifications, integrations. ex. Trigger Jenkins job, notify Slack, update JIRA
+
+Webhooks:
+Notify external systems via HTTP requests about events.
+Configured on external systems (web services, CI/CD, etc.)
+Triggered by external events ( push to a repo), Can communicate across systems and services.
+----------------------------------------------------------------------
+Git Merge Vs Rebase ?
+
+Git Merge: When you merge two branches, Git takes the contents of one branch and integrates them into another. This creates a new merge commit that combines the histories of both branches.
+Keeps the commit history of both branches intact(unbroken).
+Creates a merge commit that marks the integration point.
+The original commits in the merged branch remain in the history, along with a new commit that ties the two branches together.
+
+"git rebase re-applies your branch’s commits on top of another branch’s latest commit. It helps maintain a cleaner, linear Git history, avoiding unnecessary merge commits."
+
+Git Rebase:
+Rebase is a way to integrate changes from one branch into another, but instead of creating a merge commit, It rewrites the commit history. It moves or "re-applies" the commits from the current branch on top of another branch.
+
+The commits from the feature branch are re-applied on top of the target branch.
+There is no separate merge commit; the changes are integrated in a linear history.
+You are replacing the base of your branch with the latest changes from another branch.
+
+"Use Git Merge" when you want to preserve the full history of how branches diverged and came together.
+
+"Use Rebase" when you want a clean, linear history and don't mind rewriting commit history (and you’re not disrupting others).
+
+git rebase main     # reapplies your commits on top of latest main
+
+-------------------------------------------------------------------------
+Git Stash is a command in Git that temporarily saves changes you’ve made to your working directory (including staged and unstaged changes) but don’t want to commit yet. It allows you to "stash" your work away, clean your working directory, and come back to it later.
+
+Why Use git stash?
+You might be working on a feature or fixing a bug, and suddenly you need to switch to another branch to fix something else. But you don’t want to commit half-done work or lose your changes. Git stash helps in such situations.
+
+Why is git stash Useful?
+Temporary work saving: Save incomplete work and switch tasks or branches without committing half-done changes.
+
+Clean working directory: Clean up your working directory to be able to test things or resolve urgent issues without losing your current progress.
+
+Switch between multiple tasks: Stash changes from one task to move to another task, and then easily come back to it.
+
+Step 1: Save Your Changes
+git stash   or   git stash save "WIP: fixing login bug"
+
+Step 2: List All Stashes
+git stash list
+
+Output:
+stash@{0}: WIP on main: fixing login bug
+stash@{1}: WIP on feature/payment: update UI
+
+Step 3: Apply the Latest Stash or resume on previous work:
+git stash apply 
+or
+git stash apply stash@{1}    # check output from list
+
+---------------------------------------------------------------------------
+A Dockerfile is used to create an image, but the image serves no purpose until a container is created on a machine or node. The CMD or ENTRYPOINT specified in the Dockerfile is used only when creating a container, not when building the image.
+
+Basically: CMD:"  "it's not used while creating an image, it works while creating container.
+
+---------------------------------------------------------------------------
+Command to install helm in server:
+yum install git -y  # First install git as may repo dowloaded from git
+curl https://get.helm.sh/helm-v3.11.1-linux-amd64.tar.gz -o helm-v3.11.1-linux-amd64.tar.gz
+tar -zxvf helm-v3.11.1-linux-amd64.tar.gz
+sudo mv linux-amd64/helm /usr/local/bin/helm
+
+helm version
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+A Suggested Learning Path:
+Cloud Computing (AWS, Azure, or Google Cloud)
+
+Containers and Kubernetes
+
+Infrastructure as Code (IaC) with Terraform or Ansible
+
+CI/CD Pipelines (Jenkins, GitLab CI, or GitHub Actions)
+
+Security in DevOps (DevSecOps)
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
