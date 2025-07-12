@@ -10,8 +10,8 @@ We are checking containers health and If it stuck due to some reason, containers
 Why Use livenessProbe?
 To detect and recover from crashed, hang, or deadlocked applications.
 To enable self-healing of pods without human intervention.
-To avoid manual restarts or full pod redeployments.
------------------------------------------------------------------
+To avoid manual restart or full pod re-deployments.
+-----------------------------------------------------------------------
 1. LivenessProbe (Is the app still alive and functioning?)
 vi liveneesscheck.yml
 kind: Pod
