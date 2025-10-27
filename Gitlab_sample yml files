@@ -1,0 +1,375 @@
+.gitlab-ci.yml  sample files:
+
+stages:          # List of stages for jobs, and their order of execution
+1 - build
+2 - test
+3 - deploy
+
+build-job:       # This job runs in the build stage, which runs first.
+  stage: build
+  script:
+    - echo "Compiling the code..."
+    - echo "Compile complete."
+
+unit-test-job:   # This job runs in the test stage.
+  stage: test    # It only starts when the job in the build stage completes successfully.
+  script:
+    - echo "Running unit tests... This will take about 60 seconds."
+    - sleep 60
+    - echo "Code coverage is 90%"
+
+lint-test-job:   # This job also runs in the test stage.
+  stage: test    # It can run at the same time as unit-test-job (in parallel).
+  script:
+    - echo "Linting
+	
+	code... This will take about 10 seconds."
+    - sleep 10
+    - echo "No lint issues found."
+
+deploy-job:      # This job runs in the deploy stage.
+  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
+  environment: production
+  script:
+    - echo "Deploying application..."
+    - echo "Application successfully deployed."
+-----------------------------------------------------------------
+app.js
+const express = required ('express')
+const app = express()
+const port = 8080
+
+app.get('/', (req, res) => {
+    res.send('THis is my node application for CICD demo...!!!!')
+})
+
+app.listen(port, () => {
+console.log(`Application is listining at http://localohost:${port}`)
+})
+---
+package.json
+{
+    "dependencies": {
+        "express":"^5.1.0"
+    }
+}
+---
+// sudo apt install nodejs -y
+// sudo apt install npm -y
+// node app.js
+// npm install
+
+node app.js  (We ran this command locally from system) Now want to do same from gitlab:
+
+vs code:
+git init
+git remote add origin https://gitlab.com/tushar1313/nodejsproject.git
+git remote -v
+
+git remote remove origin   # to remove exsting origin (if required)
+git remote add origin      #(New project https URL)
+git remote add -v          # Verify new link
+
+git add .
+git status
+git commit -m "files are modified..."
+
+---------------
+Install WSL in windows to run ubuntu machine on windows:
+Powershell>
+wsl --install
+here’s a step-by-step guide to install WSL (Windows Subsystem for Linux) on your Windows system, so you can run Linux commands (like sudo, apt, etc.) directly from VS Code or PowerShell.
+
+🧩 Step 1: Enable WSL
+
+Open PowerShell as Administrator
+(Right-click Start → Windows PowerShell (Admin))
+
+Run this command:
+wsl --install
+
+This will:
+Enable WSL features
+Install Ubuntu (default Linux distro)
+Set up everything automatically
+When installation completes, restart your computer.
+
+🧩 Step 2: Launch Ubuntu
+After system restart:
+Open Start Menu → search “Ubuntu” → open it
+The first time, it will take a few minutes to set up.
+You’ll be asked to create:
+
+Username: tushar1313
+Password: tushar
+
+✅ You now have a working Linux terminal inside Windows.
+🧩 Step 3: Update & Test
+Once Ubuntu is open, update your system:
+sudo apt update && sudo apt upgrade -y
+
+Test a simple command:
+ls
+If you see folders like home, etc, usr, etc. → You’re in Linux! 🐧
+
+🧩 Step 4: Connect Ubuntu to VS Code
+To use it directly in VS Code:
+Open VS Code
+
+Install this extension:
+👉 “Remote - WSL”
+
+After installation, open command palette (Ctrl + Shift + P)
+Type → “Remote-WSL: New Window”
+
+VS Code will open a new window connected to your Ubuntu shell.
+Now you can open any folder and run Linux commands in the VS Code terminal:
+sudo apt install nodejs -y
+
+🧩 Step 5: Verify WSL Version (optional)
+To ensure WSL 2 is being used:
+wsl -l -v
+
+If it shows:
+Ubuntu    Running    2
+
+✅ You’re using WSL 2 (recommended).
+If not, upgrade with:
+wsl --set-version Ubuntu 2
+------------------------------------------------------
+1.
+stages:
+ - build_stage
+ - deploy_stage
+
+build:
+ stage: build_stage
+ image: node
+ script:
+   - echo "Build stage is started"
+ # - apt update -y
+ # - apt install npm -y
+   - npm install
+ artifacts:
+  paths:
+   - node_modules
+   - package-lock.json
+
+deploy:
+ stage: deploy_stage
+ image: node
+ script:
+  # - apt update -y
+  # - apt install nodejs -y
+    - node app.js > /dev/null 2>&1 &
+-----------------------------------------------------------------
+IMP:
+stages:
+  - build
+  - test
+  - deploy
+
+# --------------------------
+# 1️ Build Stage
+# --------------------------
+build_app:
+  stage: build
+  script:
+    - echo "Building application..."
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - target/*.war
+  tags:
+    - uat-runner   # can be same runner if you prefer
+  only:
+    - branches     # Any branches
+
+# --------------------------
+# 2️  Test Stage
+# --------------------------
+unit_tests:
+  stage: test
+  script:
+    - echo "Running unit tests..."
+    - mvn test
+  tags:
+    - uat-runner
+  only:
+    - branches         # Any branches
+
+# --------------------------
+# 3️  UAT Deployment
+# --------------------------
+deploy_uat:
+  stage: deploy
+  environment:
+    name: UAT
+    url: https://uat.mycompany.com
+  script:
+    - echo "Deploying to UAT environment..."
+    - ./deploy_uat.sh
+  tags:
+    - uat-runner
+  only:
+    - /^uat.*$/     # triggers when branch name starts with 'uat'
+  when: manual       # deploy manually if you prefer control
+  allow_failure: false
+
+# --------------------------
+# 4️  Production Deployment
+# --------------------------
+deploy_production:
+  stage: deploy
+  environment:
+    name: production
+    url: https://prod.mycompany.com
+  script:
+    - echo "Deploying to Production environment..."
+    - ./deploy_prod.sh
+  tags:
+    - prod-runner
+  only:
+    - main           # only deploy from main branch
+  when: manual       # deploy manually for safety
+  protected: true    # restricts to maintainers / authorized users only.
+  allow_failure: false
+
+----------------------------------------------------------
+
+----------------------------------------------------------
+This is one of the most important (and tricky) parts of GitLab CI/CD architecture when using the same GitLab and Runner server but deploying to different environment servers (UAT & Production).
+
+And we want:
+UAT jobs → deploy to UAT server
+Production jobs → deploy to Prod server
+
+#yaml file with ssh example:
+.gitlab-ci.yml
+
+stages:
+  - deploy
+
+# --------------------------
+# UAT DEPLOYMENT
+# --------------------------
+deploy_uat:          # Job name
+  stage: deploy
+  script:            # Actual command to run on server
+    - echo "Deploying to UAT server..."
+    - ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$UAT_SERVER "cd /opt/app && git pull && systemctl restart tomcat"
+  tags:
+    - uat-runner
+  only:
+    - /^uat.*$/      # only deploy from UAT branch  (UAT and main branches)
+  when: manual
+  environment:
+    name: UAT
+    url: https://uat.mycompany.com
+
+# --------------------------
+# PRODUCTION DEPLOYMENT
+# --------------------------
+deploy_prod:         # Job name
+  stage: deploy
+  script:
+    - echo "Deploying to PROD server..."
+    - ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$PROD_SERVER "cd /opt/app && git pull && systemctl restart tomcat"
+  tags:
+    - prod-runner
+  only:
+    - main          # Only deploy from main branch
+  when: manual
+  protected: true
+  environment:
+    name: production
+    url: https://prod.mycompany.com
+
+---------------------------------------------------------------------------
+2. Example: You have a GitLab server, 1 runner server, and 2 app servers (UAT + Production).
+This pipeline builds your app (Java WAR example), and deploys via SSH to each target server based on environment.
+.gitlab-ci.yml
+
+stages:
+  - build
+  - deploy
+
+# --------------------------
+# 1️ BUILD STAGE
+# --------------------------
+build_app:
+  stage: build
+  script:
+    - echo "Building application..."
+    - mvn clean package -DskipTests
+  artifacts:
+    paths:
+      - target/*.war
+  tags:
+    - uat-runner
+  only:
+    - branches
+
+# --------------------------
+# 2️ UAT DEPLOYMENT
+# --------------------------
+deploy_uat:
+  stage: deploy
+  environment:
+    name: UAT
+    url: https://uat.mycompany.com
+  script:
+    - echo "Deploying application to UAT environment..."
+    - |
+      ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$UAT_SERVER "
+        echo 'Deploying WAR to Tomcat on UAT server...'
+        sudo systemctl stop tomcat
+        rm -rf /opt/tomcat/webapps/myapp.war
+        rm -rf /opt/tomcat/webapps/myapp/
+        scp /builds/$CI_PROJECT_PATH/target/myapp.war $DEPLOY_USER@$UAT_SERVER:/opt/tomcat/webapps/
+        sudo systemctl start tomcat
+      "
+  tags:
+    - uat-runner
+  only:
+    - /^uat.*$/      # deploys only when branch starts with 'uat'
+  when: manual
+  allow_failure: false
+
+# --------------------------
+# 3️ PRODUCTION DEPLOYMENT
+# --------------------------
+deploy_prod:
+  stage: deploy
+  environment:
+    name: production
+    url: https://prod.mycompany.com
+  script:
+    - echo "Deploying application to PRODUCTION environment..."
+    - |
+      ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$PROD_SERVER "
+        echo 'Deploying WAR to Tomcat on Production server...'
+        sudo systemctl stop tomcat
+        rm -rf /opt/tomcat/webapps/myapp.war
+        rm -rf /opt/tomcat/webapps/myapp/
+        scp /builds/$CI_PROJECT_PATH/target/myapp.war $DEPLOY_USER@$PROD_SERVER:/opt/tomcat/webapps/
+        sudo systemctl start tomcat
+      "
+  tags:
+    - prod-runner
+  only:
+    - main            # only deploys from main branch
+  when: manual
+  protected: true     # restricts job to authorized users
+  allow_failure: false
+----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+

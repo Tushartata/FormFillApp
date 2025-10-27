@@ -1,150 +1,508 @@
-maven - build
-sonarQube - quality code
-selenium - tester test code
------------------------------------------------------------------------
-git cammand
-vi/etc/hostame   (It is used to rename the hostname )
+GitLAB:
+Gitlab account online:
+tusharmb1314@gmail.com/ tushar1313/Tata@#123
+CI-CD File name should be .gitlab-ci.yml  (New CI-CD configuration file)
+
+This document lists the configuration options for the GitLab .gitlab-ci.yml file. This file is where you define the CI/CD jobs that make up your pipeline.
+
+CI/CD jobs are the fundamental elements of a GitLab CI/CD pipeline. Jobs are configured in the .gitlab-ci.yml file with a list of commands to execute to accomplish tasks like building, testing, or deploying code.
+
+Jobs:
+Execute on a "runner", for example in a Docker container.
+Run independently from other jobs.
+Jobs are defined with YAML keywords that define all aspects of the job’s execution, including keywords that:
+
+Control how and when jobs run.
+Group jobs together in collections called "stages". "Stages" run in sequence, while all jobs in a stage can run in parallel.
+Define CI/CD "variables" for flexible configuration.
+Define "caches" to speed up job execution.
+Save files as "artifacts" which can be used by other jobs.
+
+You can’t use these keywords as job names:
+image
+services
+stages
+before_script
+after_script
+variables
+cache
+include
+pages:deploy configured for a deploy stage
+
+Use unique names for your each jobs.
+---
+Hide a job:
+To temporarily disable a job without deleting it from the configuration file, add a period (.) to the start of the job name. Hidden jobs do not need to contain the script or trigger keywords, but must contain valid YAML configuration.
+ex:
+.hidden_job:
+  script:
+    - run test
+
+Hidden jobs are not processed by GitLab CI/CD,
+---
+Gitlab runner set-up:
+Setting--> CICD--Runner: Click on three dots --> show gitlab runner and instruction:
+
+# Download the binary for your system
+sudo curl -L --output /usr/local/bin/gitlab-runner https://gitlab-runner-downloads.s3.amazonaws.com/latest/binaries/gitlab-runner-linux-amd64
+
+# Give it permission to execute
+sudo chmod +x /usr/local/bin/gitlab-runner
+
+# Create a GitLab Runner user
+sudo useradd --comment 'GitLab Runner' --create-home gitlab-runner --shell /bin/bash
+
+# git remote remove origin   # git remote -v remove
+
+# Install and run as a service
+sudo gitlab-runner install --user=gitlab-runner --working-directory=/home/gitlab-runner
+sudo gitlab-runner start
+or
+# If using a `deb` package based distribution
+curl -s https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | sudo bash
+apt install -y gitlab-runner
+or
+# If using an `rpm` package based distribution
+curl -s https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.rpm.sh | sudo bash
+dnf install -y gitlab-runner
+[--------------------]
+#Command to register runner: IMP
+sudo gitlab-runner register --url https://gitlab.tatacapital.com/ --registration-token GR13489415RQg-5mg_mZPykGwMdsX
+
+sudo gitlab-runner status   # To check runner status up/down
+
+dpkg --print-architecture   # To check server architecture.
+
+#Recommended Runner Setup:
+sudo gitlab-runner register
+
+#When prompted:
+Enter "uat-runner" as a tag for UAT pipelines
+Enter "prod-runner" as a tag for production pipelines
+
+(If you’re using the same server for both, you can register two runners on that same host, each with different tags.)
+
+----------------------------------------------------------
+This is one of the most important (and tricky) parts of GitLab CI/CD architecture when using the same GitLab and Runner server but deploying to different environment servers (UAT & Production).
+
+And we want:
+UAT jobs → deploy to UAT server
+Production jobs → deploy to Prod server
+Use SSH in .gitlab-ci.yml (Most Common)
+
+Your GitLab Runner executes jobs locally but SSHs into target servers to perform deployment.
+1. Use SSH in .gitlab-ci.yml (Most Common)
+
+ssh-keygen -t rsa -b 4096 -C "gitlab-runner@company"     # from runner server
+
+# then copy id to server target server:
+ssh-copy-id user@uat-server-ip
+ssh-copy-id user@prod-server-ip
+
+#yaml file with ssh example:
+.gitlab-ci.yml
+
+stages:
+  - deploy
+
+# --------------------------
+# UAT DEPLOYMENT
+# --------------------------
+deploy_uat:          # Job name
+  stage: deploy
+  script:            # Actual command to run on server
+    - echo "Deploying to UAT server..."
+    - ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$UAT_SERVER "cd /opt/app && git pull && systemctl restart tomcat"
+  tags:
+    - uat-runner
+  only:
+    - /^uat.*$/      # only deploy from UAT branch  (UAT and main branches)
+  when: manual
+  environment:
+    name: UAT
+    url: https://uat.mycompany.com
+
+# --------------------------
+# PRODUCTION DEPLOYMENT
+# --------------------------
+deploy_prod:         # Job name
+  stage: deploy
+  script:
+    - echo "Deploying to PROD server..."
+    - ssh -o StrictHostKeyChecking=no $DEPLOY_USER@$PROD_SERVER "cd /opt/app && git pull && systemctl restart tomcat"
+  tags:
+    - prod-runner
+  only:
+    - main          # Only deploy from main branch
+  when: manual
+  protected: true
+  environment:
+    name: production
+    url: https://prod.mycompany.com
+
+--------------------------------------------------------
+Option 2 — Separate Runners for Each Environment (if possible)
+
+If you want tighter control and isolation, you can install two GitLab runners (even on the same VM): or single server:
+
+One registered with tag "uat-runner"
+Another with tag "prod-runner"
+
+Then in .gitlab-ci.yml, use:
+deploy_uat:
+  tags:
+    - uat-runner
+
+deploy_prod:
+  tags:
+    - prod-runner
+----------------------
+Each runner can have its own SSH key, environment variables, or credentials.
+This approach is safer for production.
+
+Tip: Use protected: true   #so only authorized users can deploy to production.
+
+----------
+ssh-keygen -t rsa -b 4096 -C "gitlab-runner"
+ssh-copy-id ubuntu@<uat-server-ip>
+ssh-copy-id ubuntu@<prod-server-ip>
+----------
+Step 3: Register Two Logical Runners (optional but recommended)
+Even if you have one physical runner, you can register two logical runners:
+
+sudo gitlab-runner register
+# 1st runner with tag: uat-runner
+# 2nd runner with tag: prod-runner
+----------
+Step 4: Protect your main branch
+In GitLab → Settings → Repository → Protected Branches
+Protect main
+Only “Maintainers” can merge or trigger production deploys
+----------
+
+When artificats is creted while building where it stored on runner server ?
+GitLab Server Stores Artifacts (Permanent): The runner uploads artifacts to the GitLab server.
+/var/opt/gitlab/gitlab-rails/shared/artifacts/
+
+How to configure SSL on machine where docker is running ?
+
+GitLab CI/CD → GitLab Runner → SSH to EC2 → Build Docker image → Run container → NGINX reverse proxy → HTTPS via wildcard cert
+You’ll be combining GitLab CI, Docker, NGINX, and your wildcard SSL.
+
+ps aux | grep gitlab   # To check who is owner of this process - You’ll see processes owned by git, not root.
+
+To verify directory ownership:
+ls -ld /var/opt/gitlab
+ls -ld /etc/gitlab
+ls -ld /var/log/gitlab            # Expected owner → git:git
+---------------------------------
+If any directory mistakenly shows root, fix it:
+sudo chown -R git:git /var/opt/gitlab
+sudo chown -R git:git /etc/gitlab
+sudo chown -R git:git /var/log/gitlab
+---------------------------------
+2. GitLab Runner Default User
+When you installed the runner using:
+
+sudo gitlab-runner install
+sudo gitlab-runner start
+-----
+the installation creates a service user:
+User: gitlab-runner
+Group: gitlab-runner
+
+ps aux | grep gitlab-runner   # check ownership
+sudo systemctl status gitlab-runner
+-----
+All runner jobs and configurations are stored under:
+/etc/gitlab-runner/
+/home/gitlab-runner/
+-----
+Make sure ownership is correct:
+sudo chown -R gitlab-runner:gitlab-runner /etc/gitlab-runner
+sudo chown -R gitlab-runner:gitlab-runner /home/gitlab-runner
+-----
+# IMP: Once your org removes root access:
+Ensure both services are systemd-managed:
+sudo systemctl enable gitlab-runsvdir
+sudo systemctl enable gitlab-runner
+
+# All configs should remain under /etc/gitlab or /etc/gitlab-runner.
+2. Add gituser to both groups  IMP:
+sudo usermod -aG git gituser
+sudo usermod -aG gitlab-runner gituser
+
+# permanant limited SUDO access required: for restart services:
+gituser ALL=(ALL) NOPASSWD: /bin/systemctl restart gitlab*, /bin/systemctl status gitlab*, /bin/systemctl restart gitlab-runner, /bin/systemctl status gitlab-runner
+
+#
+
+
+------------------------------   SAI ACADEMY   ------------------------------
+Maven - Build
+sonarquebe - Quality of code
+selenium - Test code
+git version 2.42
+-------------------------------------------------------------------------------
+git command
+vi /etc/hostname (It is used to rename hostname)
 init6            ( To restart the server )
-touch file{n1..n10}   to create multiple files
+touch file{n..n5}   to create multiple files
 github.com
 email:tusharmb1314@gmail.com/Tushar@1313   username:Tushartata
 
 Token:ghp_8iKuEPA6nkJ4S7b8BOULl7JJFmKdFA2yeGKt
 Sonar: b773b6444a6cc5fd55788a73909ebf4b64fcde56
 
-yum update -y
+yum update -y 
 yum install git -y
-which git 
-git --version;    (current version 2.40) # Java 21 is the current enterprise standard.
+which git
+git --version;    (current version 2.40)
 git config --global user.name "tushar"
 git config --global user.email "tusharmb1314@gmail.com"
 git config --list   (to show user details name and email ID's)
 ----------------------------------------------------------------------------------
 mkdir mumbaigit    ( create directory first )
 ls                  
-cd mumbaigit/        (go inside directory)
-git init             (then run the init command)
-ls -a                (to see hidden git files .git)
-vi myfile            (to create a file)
-ls -a                (to see hidden git files .git)
-git status           (check file status )
-git add .            (to add file in staging area/index area )
-git status
+cd mumbaigit/      ( go inside directory )
+git init            ( then run the init command - It creates a new .git subdirectory in your current directory, which contains all the metadata and objects required for version control.
+
+What Happens When You Run git init ?
+
+Creates a .git folder (hidden by default) with:
+All configuration files :
+ . Commit history (once added)
+ . Staging area
+ . Makes the current directory as a Git's working directory
+ . Prepares the project to start tracking files and changes
+ 
+Note: You can use git init as many times as you want — once per project or folder where you want to create a new Git repository.
+------------------------------------------------------------
+ls -a               (to see hidden git files .git)
+vi myfile           (to create a file)
+ls -a               (to see hidden git files .git)
+git status          (check file status )  - Untracked file myfile
+git add .           (to add file in staging area/index area ) (The file is now staged)
+git status          (File is stage, if rollback use "git restore")
 git commit -m "first line"  (to add file in local repo area)
-git status
+git status           (Nothing to commit, working tree clean)
 ls -a
-git log
-git show e5b38f8
-git remote add origin https://github.com/SaiDevopsFaculty/cetralgit.git    (copy it from web)
+git log    (It shows:How many committed done till now)
+commit  e5b38f83vnjnvoern30rii03ri03r3r
+Author: Sai <saidemy@gmail.com>
+Date: 
+git show e5b38f83   (It shows actual committed code)
+------------------------
+git remote add origin : it used to link "you current local repository" to "remote repository"
+git remote add origin https://github.com/SaiDevopsFaculty/centralgit.git (copy it from web)
 git remote -v       (it shows connection to central git hub)
+git remote remove origin  # To remove 
+
 git branch          (it shows current branch name)
+* master
 git branch -M main  (it used to change branch name) rename branch
 git branch          (check new branch name)
-git branch mynewbranch  (to create new branch)   # We can create multile branches, no limit.
-git checkout mynewbranch  (switch to a new branch)
+* main 
+git branch mynewbranch    (to create a new branch)
+git checkout mynewbranch  (switch to a new branch i.e mynewbranch) 
 git add .
 git commit -m "......"
+Note: Every branch having their own workspace and staging area, until we add and commit.
+ls -l
 
-note: every branch having their own workspace and staging area, until we add and commit.
-
-ls -lrt
 git log             
-git push origin main
+git push -u origin main (It pushes local commit on the main branch to the remote repository on Github)
 username : email id of central github
 password : paste the token from central github
 -------------------------------------------------------------------
-vi myfile
-git status
+vi myfile     (added ""second line"")
+git status    
 git add .
 git status
-git commit -m"second line"
+git commit -m "second line"
 git log
 git show e0n7088
 git push origin main
+------------------------------
 ls
 cat myfile
 git log
 cat myfile
 git log
-git pull origin main
+git pull origin main  
+(It use to fetch and merge changes from main branch of remote repository to current local branch).
 cat myfile
 git log
 git show f4b47a7be0
 vi myfile
-git add .
+git add .  
 git commit -m "fourth line"
 git push origin main
 history
---------------------------------------------------------------------------
+---------------------------------------
 git pull origin main:main
-git pull origin main:new
+git pull origin main:new   (Main: Remote branch and New is local branch)
 
 git push origin main:main
-git push origin main:new
+git push origin main:new    {(Main local branch and new is remote branch) main --> new}
 
-git checkout new  (to switch to another branch)
-
---------------------------------------------------------------------------
+git checkout new  (to switch to another branch i.e new)
+---------------------------------------
 GIT MERGE (PULL) : To copy files and commit id from one branch to another branch.
 
 git branch
-* main
+* main       (Current Branch indicate with *)
   new
-git merge new  (data from new branch will copy to main branch) (IMP)
+git merge new  (Data from new branch will copy to main branch)
 
-Note: If both branch having the same file-name then conflict will occurred, then goto file correct the code and then add and commit.
+Note: If both branch having the same file name then conflict will occurred, then goto file correct the code and then add and commit.
 vi filename
 git add .
 git commit -m "conflict corrected"
----------------------------------------------------------------------------
-GIT IGNORE: to ignore any specific file or .class file, we have to mentioned such file name in gitignore file.
+---------------------------
+GIT IGNORE: to ignore any specific file or .class file, we have to mentioned such file name in gitignore file. This need to create first vi .gitignore.
 
 vi .gitignore
 *.class
 git add .
 git commit -m "git ignore"
---------------------------------------------------------------------------- (IMP)
-GIT RESET :To rollback the added file from staging area/index area. (Before commit)
-git reset filename or
+
+Note: If a file is already being tracked by git, now adding it to .gitignore "won't stop it from being tracked" You must untrack it first.
+
+git rm --cache filename
+git commit -m "Stop tracking filename"
+------------------------
+GIT RESET : To rollback the added file from staging area/index area. (before commit)
+
+git reset filename
 git reset .
---------------------------------------------------------------------------- (IMP)
-GIT REVERT : To delete the commited file use revert command; It delete file from workspace, staging area as well.(deleted data would highlighted in red colour)
+---------------------------
+GIT REVERT : To delete the commited file use revert command; it delete file from workspace, staging area as well.( Deleted data would highlighted in red colour)
 
 git revert commit_code (2n73322ded7)
-git log --oneline                       #Single line details one line.
+git log --oneline
+--------------------------
+GIT Clean : To delete the untracked files and directories from workspace use the below command.
+git clean -n   (show what would be deleted - safe side)
+git clean -f   (Actually delete untracked files)
+git clean -fd  (Delete untracked directories as well) 
 
-
-"git revert is used to create a new commit that undoes the effects of a specific earlier commit, without modifying the project history. It’s ideal for production or shared branches."
-
-Use Case: (IMP)
-"If a deployed feature broke production, git revert lets us safely roll back that change while keeping the history intact."
-
----------------------------------------------------------------------------
-GIT Clean : To delete the untracked files from workspace use the below command.
-git clean -n  Dry run (to preview).
-git clean -f  Actually delete untracked files.
-
-"git clean is used to delete "untracked files or directories" from the working directory, helping developers reset their workspace to a clean state."
-
----------------------------------------------------------------------------
+Note: Git clean is irreversible, once deleted can't recover.
+--------------------------
 GIT TAG: To mentioned any tag name to the commit id and can use commit tag to see data.
-git tag -a VERY IMPORTANT -m "this is very imp" commit_id
+git tag -a VERY IMPORTANT -m "This is very imp" commit_id
 git tag -a IMP -m "very important"  2n73322ded7
 git log --oneline
 git show IMP
 git tag           : to show all tag
-git tag -d IMP    : to delete the tag (Only delete tag)
----------------------------------------------------------------------------
-GIT CLONE : If need to copy entire central repository(git-hub/bit-bucket) for new joinee/employee we can use clone command. need to copy url from git hub. (init not required, same name will be copy from central repository.)
+git tag -d IMP    : to delete the tag
+--------------------------
+GIT CLONE : If need to copy entire central repository(git hub/big bucket) for a new joinee/employee we can use clone command, need to copy url from git hub. (init not required, same name will be copy from central repository.)
 
+Goto user's home directory
+/home/Raj
 git clone URL
-
----------------------------------------------------------------------------
+--------------------------
 generate keygen:
 ssh-keygen
 id_rsa
 id_rsa.pub
-cat id_rsa.pub and copy key properly which required to paste in centralgithub ---->
+cat id_rsa.pub and copy key properly which required to paste in central github ---->
 setting ---> ssh and GPG keys ---> add new ssh keys ---> paste key and save.
-(any number of keys can be added in centralgithub )
+(any number of keys can be added in central github )
+---------------------------
+IMP:
+Git : Fetch and Pull
+What is the difference between git pull and git fetch  ?
+
+Git Pull: pull the files and comments both
+Git Fetch: Only fetch the files
+------------------------------------------------------------------...
+How to pull specific files only from github/central repository ?
+
+"git cherry-pick" is a Git command that allows you to apply a specific commit from one branch to another.
+
+git checkout main                # Go in main
+git log                          # To find it.
+git cherry-pick <commit-hash>    # Call the files
+-----------------------------------------------------------------
+What is Git hooks and webhooks ?
+
+It is used to push code from git to the jenkins.  Git/github serevr ------> Jenkins Server. Same as POll SCM.
+Git hooks are scripts that Git automatically executes before or after certain events, such as committing, pushing, or merging changes in a Git repository.
+
+Webhooks are a way for one system (like GitHub, GitLab, or any other service) to send real-time information to another system by making an HTTP request when an event occurs.
+
+Git hooks:
+Automate tasks on the local system before/after Git actions.
+Local to the Git repository (in .git/hooks).
+Triggered by Git actions like commit, push, merge, etc. Works locally within a Git repository
+
+Webhooks:
+Notify external systems via HTTP requests about events.
+Configured on external systems (web services, CI/CD, etc.)
+Triggered by external events ( push to a repo), Can communicate across systems and services.
+
+----------------------------------------------------------------------
+Git Merge Vs Rebase ?
+
+Git Merge: When you merge two branches, Git takes the contents of one branch and integrates them into another. This creates a new merge commit that combines the histories of both branches.
+Keeps the commit history of both branches intact.
+Creates a merge commit that marks the integration point.
+The original commits in the merged branch remain in the history, along with a new commit that ties the two branches together.
+
+Git Rebase:
+Rebase is a way to integrate changes from one branch into another, but instead of creating a merge commit, it rewrites the commit history. It moves or "re-applies" the commits from the current branch on top of another branch.
+
+The commits from the feature branch are re-applied on top of the target branch.
+There is no separate merge commit; the changes are integrated in a linear history.
+You are replacing the base of your branch with the latest changes from another branch.
+
+
+"Use Merge" when you want to preserve the full history of how branches diverged and came together.
+
+"Use Rebase" when you want a clean, linear history and don't mind rewriting commit history (and you’re not disrupting others).
+
+-------------------------------------------------------------------------
+Git Stash is a command in Git that temporarily saves changes you’ve made to your working directory (including staged and unstaged changes) but don’t want to commit yet. It allows you to "stash" your work away, clean your working directory, and come back to it later.
+
+Why Use git stash?
+You might be working on a feature or fixing a bug, and suddenly you need to switch to another branch to fix something else. But you don’t want to commit half-done work or lose your changes. Git stash helps in such situations.
+
+Why is git stash Useful?
+Temporary work saving: Save incomplete work and switch tasks or branches without committing half-done changes.
+
+Clean working directory: Clean up your working directory to be able to test things or resolve urgent issues without losing your current progress.
+
+Switch between multiple tasks: Stash changes from one task to move to another task, and then easily come back to it.
+
 ---------------------------------------------------------------------------
+A Dockerfile is used to create an image, but the image serves no purpose until a container is created on a machine or node. The CMD or ENTRYPOINT specified in the Dockerfile is used only when creating a container, not when building the image.
+
+Basically: CMD:"  "  it's not used while creating an image, it works while creating container.
+
+---------------------------------------------------------------------------
+Command to install helm in server:
+yum install git -y  # First install git as may repo dowloaded from git
+curl https://get.helm.sh/helm-v3.11.1-linux-amd64.tar.gz -o helm-v3.11.1-linux-amd64.tar.gz
+tar -zxvf helm-v3.11.1-linux-amd64.tar.gz
+sudo mv linux-amd64/helm /usr/local/bin/helm
+
+helm version
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+A Suggested Learning Path:
+Cloud Computing (AWS, Azure, or Google Cloud)
+
+Containers and Kubernetes
+
+Infrastructure as Code (IaC) with Terraform or Ansible
+
+CI/CD Pipelines (Jenkins, GitLab CI, or GitHub Actions)
+
+Security in DevOps (DevSecOps)
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+
